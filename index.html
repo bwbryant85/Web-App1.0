@@ -254,13 +254,13 @@ transition:opacity .3s;box-shadow:0 0 12px var(–cyan)}
 #layer.open #swipe-hint{opacity:.4}
 
 /* ── 2048 ── */
-.g2048-wrap{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;padding-top:89px;padding-bottom:30px;gap:12px;overflow:hidden;isolation:isolate;z-index:200;position:relative}
-.g2048-top{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:380px;flex-shrink:0}
-.g2048-title{font-size:2.2rem;font-weight:900;color:var(–cyan);letter-spacing:.05em;text-shadow:var(–gc)}
+.g2048-wrap{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;padding-top:89px;padding-bottom:20px;gap:10px;overflow:hidden;isolation:isolate;z-index:200;position:relative}
+.g2048-top{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:440px;flex-shrink:0;padding:0 4px}
+.g2048-title{font-size:2.6rem;font-weight:900;color:var(–cyan);letter-spacing:.05em;text-shadow:var(–gc)}
 .g2048-scores{display:flex;gap:8px}
-.g2048-score-box{background:rgba(255,255,255,.06);border-radius:10px;padding:6px 12px;text-align:center;min-width:56px}
+.g2048-score-box{background:rgba(255,255,255,.06);border-radius:12px;padding:8px 16px;text-align:center;min-width:70px}
 .g2048-score-lbl{font-family:‘Share Tech Mono’,monospace;font-size:.37rem;color:var(–dim);letter-spacing:.1em;text-transform:uppercase}
-.g2048-score-val{font-family:‘Share Tech Mono’,monospace;font-size:1.05rem;color:var(–text);font-weight:700}
+.g2048-score-val{font-family:‘Share Tech Mono’,monospace;font-size:1.2rem;color:var(–text);font-weight:700}
 .g2048-hint{font-family:‘Share Tech Mono’,monospace;font-size:.62rem;color:var(–dim);letter-spacing:.09em;text-align:center;flex-shrink:0;opacity:.6}
 @keyframes tile-pop{0%{transform:scale(.8);opacity:.5}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
 @keyframes tile-merge{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
@@ -297,7 +297,7 @@ padding-right:calc(var(–sr)+var(–xc));gap:14px}
 .bm-canvas-overlay{position:absolute;inset:0;pointer-events:none}
 .bm-test-badge{position:absolute;left:50%;transform:translateX(-50%);font-family:‘Orbitron’,sans-serif;font-size:.48rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.92);background:rgba(0,0,0,.6);padding:5px 14px;border-radius:20px;border:1px solid rgba(255,255,255,.15);white-space:nowrap}
 .bm-test-progress{position:absolute;bottom:0;left:0;height:3px;background:var(–cyan);transition:width .3s ease;box-shadow:0 0 8px var(–cyan)}
-.bm-panel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 40px;display:flex;flex-direction:column;gap:10px}
+.bm-panel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 40px;display:flex;flex-direction:column;gap:12px}
 .bm-top-row{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .bm-ring-wrap{position:relative;width:96px;height:96px;flex-shrink:0}
 .bm-ring-svg{transform:rotate(-90deg);display:block}
@@ -305,34 +305,34 @@ padding-right:calc(var(–sr)+var(–xc));gap:14px}
 .bm-ring-fill{fill:none;stroke:var(–cyan);stroke-width:7;stroke-linecap:round;stroke-dasharray:207;stroke-dashoffset:207;transition:stroke-dashoffset .9s linear,stroke .4s}
 .bm-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .bm-ring-time{font-family:‘Share Tech Mono’,monospace;font-size:1.2rem;color:var(–cyan);line-height:1}
-.bm-ring-lbl{font-family:‘Share Tech Mono’,monospace;font-size:.3rem;color:var(–dim);letter-spacing:.12em;text-transform:uppercase;margin-top:2px}
+.bm-ring-lbl{font-family:‘Share Tech Mono’,monospace;font-size:.4rem;color:var(–dim);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
 .bm-top-info{flex:1;display:flex;flex-direction:column;gap:4px}
-.bm-top-title{font-size:.4rem;letter-spacing:.22em;text-transform:uppercase;color:var(–dim)}
+.bm-top-title{font-size:.52rem;letter-spacing:.18em;text-transform:uppercase;color:var(–dim)}
 .bm-top-phase{font-family:‘Share Tech Mono’,monospace;font-size:.85rem;color:var(–cyan)}
-.bm-top-sub{font-family:‘Share Tech Mono’,monospace;font-size:.44rem;color:var(–dim);opacity:.7}
-.bm-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.bm-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:13px;padding:10px 11px;position:relative;overflow:hidden}
+.bm-top-sub{font-family:‘Share Tech Mono’,monospace;font-size:.58rem;color:var(–dim);opacity:.7}
+.bm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bm-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:14px 14px;position:relative;overflow:hidden}
 .bm-card-accent{position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
 .bm-card-head{display:flex;align-items:center;gap:4px;margin-bottom:3px}
-.bm-card-ico{font-size:.85rem;line-height:1}
-.bm-card-lbl{font-size:.34rem;letter-spacing:.15em;text-transform:uppercase;color:var(–dim)}
+.bm-card-ico{font-size:1.1rem;line-height:1}
+.bm-card-lbl{font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:var(–dim)}
 .bm-card-val{font-family:‘Share Tech Mono’,monospace;font-size:1.05rem;font-weight:700;line-height:1;margin-bottom:5px}
 .bm-card-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden;margin-bottom:4px}
 .bm-card-fill{height:100%;border-radius:2px;width:0%;transition:width .5s ease}
-.bm-spark{height:32px;display:flex;align-items:flex-end;gap:1px}
+.bm-spark{height:44px;display:flex;align-items:flex-end;gap:1.5px}
 .bm-spark-bar{flex:1;border-radius:1px 1px 0 0;min-height:2px}
 .bm-score-box{background:linear-gradient(135deg,rgba(0,255,204,.07),rgba(255,74,248,.07));border:1px solid rgba(0,255,204,.28);border-radius:18px;padding:18px 14px;text-align:center}
-.bm-score-num{font-size:3.2rem;font-weight:900;letter-spacing:.05em;line-height:1;text-shadow:0 0 40px rgba(0,255,204,.7)}
-.bm-score-grade{font-size:1rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-top:6px}
+.bm-score-num{font-size:3.8rem;font-weight:900;letter-spacing:.05em;line-height:1;text-shadow:0 0 40px rgba(0,255,204,.7)}
+.bm-score-grade{font-size:1.2rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-top:8px}
 .bm-score-label{font-family:‘Share Tech Mono’,monospace;font-size:.46rem;color:var(–dim);letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
 .bm-score-detail{font-family:‘Share Tech Mono’,monospace;font-size:.48rem;color:var(–dim);margin-top:6px;opacity:.7}
 .bm-score-tests{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px;text-align:left}
-.bm-score-test{font-family:‘Share Tech Mono’,monospace;font-size:.42rem;color:var(–dim);background:rgba(255,255,255,.04);padding:5px 7px;border-radius:7px}
-.bm-score-test span{display:block;font-size:.56rem;color:var(–text);margin-top:2px}
+.bm-score-test{font-family:‘Share Tech Mono’,monospace;font-size:.55rem;color:var(–dim);background:rgba(255,255,255,.04);padding:7px 10px;border-radius:9px}
+.bm-score-test span{display:block;font-size:.7rem;color:var(–text);margin-top:3px}
 .bm-btns{display:flex;gap:8px;flex-shrink:0}
-.bm-start-btn{flex:1;font-family:‘Orbitron’,sans-serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:#050508;background:var(–cyan);border:none;padding:13px 14px;border-radius:22px;cursor:pointer;box-shadow:0 0 22px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent}
+.bm-start-btn{flex:1;font-family:‘Orbitron’,sans-serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:#050508;background:var(–cyan);border:none;padding:16px 18px;border-radius:26px;cursor:pointer;box-shadow:0 0 22px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent}
 .bm-start-btn:active{background:var(–mag)}
-.bm-stop-btn{flex:1;font-family:‘Orbitron’,sans-serif;font-size:.54rem;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:#c62828;border:none;padding:13px 14px;border-radius:22px;cursor:pointer;box-shadow:0 0 16px rgba(198,40,40,.45);-webkit-tap-highlight-color:transparent}
+.bm-stop-btn{flex:1;font-family:‘Orbitron’,sans-serif;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:#c62828;border:none;padding:16px 18px;border-radius:26px;cursor:pointer;box-shadow:0 0 16px rgba(198,40,40,.45);-webkit-tap-highlight-color:transparent}
 .bm-stop-btn:active{background:#8b0000}
 </style>
 
@@ -553,8 +553,21 @@ function initWeather(){
       render();
     }catch(e){showManual('Connection error.');}
   };
-  const showManual=(err='')=>{wrap.innerHTML=(navigator.geolocation?'<button class="cyan-btn" id="wx-loc" style="margin-bottom:4px">📍 Use My Location</button>':'')+`<div class="wx-ico">🌍</div><div class="wx-desc" style="color:var(--text);font-size:.75rem;letter-spacing:.06em">Enter your city</div><div class="wx-city-wrap"><input class="wx-city-input" id="wxi" type="text" placeholder="e.g. Dunkirk, NY" autocomplete="off" spellcheck="false"><div class="wx-dropdown" id="wxd"></div></div>${err?`<div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:#ff6d6d">${err}</div>`:''}<button class="cyan-btn" id="wxgo">Search →</button>`;
-    const locBtnEl=document.getElementById('wx-loc');if(locBtnEl)locBtnEl.onclick=()=>{loading('Requesting location...');navigator.geolocation.getCurrentPosition(p=>fetchW(p.coords.latitude,p.coords.longitude,null),()=>showManual('Location denied.'),{timeout:12000});};
+  const showManual=(err='')=>{wrap.innerHTML=(navigator.geolocation?'<button class="cyan-btn" id="wx-loc" style="margin-bottom:8px;font-size:.7rem;padding:14px 32px;letter-spacing:.1em">📍 Use My Location</button>':'')+`<div class="wx-ico">🌍</div><div class="wx-desc" style="color:var(--text);font-size:.75rem;letter-spacing:.06em">Enter your city</div><div class="wx-city-wrap"><input class="wx-city-input" id="wxi" type="text" placeholder="e.g. Dunkirk, NY" autocomplete="off" spellcheck="false"><div class="wx-dropdown" id="wxd"></div></div>${err?`<div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:#ff6d6d">${err}</div>`:''}<button class="cyan-btn" id="wxgo">Search →</button>`;
+    const locBtnEl=document.getElementById('wx-loc');if(locBtnEl)locBtnEl.onclick=()=>{
+      loading('Requesting location...');
+      navigator.geolocation.getCurrentPosition(
+        p=>fetchW(p.coords.latitude,p.coords.longitude,null),
+        err=>{
+          let msg='Location access denied.';
+          if(err.code===1)msg='Location blocked. Go to Settings › Safari › Location to allow.';
+          else if(err.code===2)msg='Location unavailable. Try manual search.';
+          else if(err.code===3)msg='Location timed out. Try manual search.';
+          showManual(msg);
+        },
+        {timeout:15000,enableHighAccuracy:false,maximumAge:300000}
+      );
+    };
     const inp=document.getElementById('wxi'),drop=document.getElementById('wxd');let dbt=null;
     const sel=(lat,lon,name)=>{drop.style.display='none';loading('Fetching...');fetchW(lat,lon,name);};
     const mkDrop=res=>{if(!res.length){drop.style.display='none';return;}drop.innerHTML=res.map(loc=>{const lbl=[loc.name,loc.admin1,loc.country].filter(Boolean).join(', ');return`<div class="wx-drop-item" data-lat="${loc.latitude}" data-lon="${loc.longitude}" data-name="${lbl}">${lbl}</div>`;}).join('');drop.style.display='block';drop.querySelectorAll('.wx-drop-item').forEach(el=>{const go=()=>sel(+el.dataset.lat,+el.dataset.lon,el.dataset.name);el.addEventListener('touchstart',e=>{e.preventDefault();go();},{passive:false});el.addEventListener('mousedown',go);});};
@@ -1170,7 +1183,7 @@ function init2048(){
   var wrap=document.createElement('div');wrap.className='g2048-wrap';content.appendChild(wrap);
   var COLORS={0:{bg:'rgba(255,255,255,.04)',fg:'transparent'},2:{bg:'#eee4da',fg:'#776e65'},4:{bg:'#ede0c8',fg:'#776e65'},8:{bg:'#f2b179',fg:'#fff'},16:{bg:'#f59563',fg:'#fff'},32:{bg:'#f67c5f',fg:'#fff'},64:{bg:'#f65e3b',fg:'#fff'},128:{bg:'#edcf72',fg:'#fff'},256:{bg:'#edcc61',fg:'#fff'},512:{bg:'#edc850',fg:'#fff'},1024:{bg:'#edc53f',fg:'#fff'},2048:{bg:'#edc22e',fg:'#fff'}};
   var GRID=4,grid,score,best,moving=false;
-  var cellSz=0,GAP=5,PAD=6,tileLayer=null,scoreEl=null,bestEl=null,gridWrap=null;
+  var cellSz=0,GAP=6,PAD=7,tileLayer=null,scoreEl=null,bestEl=null,gridWrap=null;
   function newGrid(){return Array.from({length:GRID},function(){return Array(GRID).fill(0);});}
   function addRandom(g){var empty=[];for(var r=0;r<GRID;r++)for(var c=0;c<GRID;c++)if(!g[r][c])empty.push([r,c]);if(!empty.length)return null;var rc=empty[Math.floor(Math.random()*empty.length)];g[rc[0]][rc[1]]=Math.random()<.9?2:4;return rc;}
   function isOver(g){for(var r=0;r<GRID;r++)for(var c=0;c<GRID;c++){if(!g[r][c])return false;if(c<GRID-1&&g[r][c]===g[r][c+1])return false;if(r<GRID-1&&g[r][c]===g[r+1][c])return false;}return true;}
@@ -1286,7 +1299,7 @@ function init2048(){
   function reset(){grid=newGrid();score=0;moving=false;try{best=parseInt(sessionStorage.getItem('bst2048')||'0');}catch(e){best=0;}build();}
   function build(){
     wrap.innerHTML='';
-    var avW=Math.min(content.offsetWidth-28,380);
+    var avW=Math.min(content.offsetWidth-20,440);
     cellSz=Math.floor((avW-PAD*2-GAP*(GRID-1))/GRID);
     var top=document.createElement('div');top.className='g2048-top';
     top.innerHTML='<div class="g2048-title">2048</div><div class="g2048-scores"><div class="g2048-score-box"><div class="g2048-score-lbl">Score</div><div class="g2048-score-val" id="g2sc">0</div></div><div class="g2048-score-box"><div class="g2048-score-lbl">Best</div><div class="g2048-score-val" id="g2best">0</div></div></div>';
