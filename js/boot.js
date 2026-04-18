@@ -14,6 +14,7 @@ const APPS = [
   { id:'timer',       name:'Timer',       ico:'⏱️', col:'#69ff47', group: null },
   { id:'notes',       name:'Notes',       ico:'📝', col:'#ffd740', group: null },
   { id:'sports',      name:'Sports',      ico:'🏆', col:'#ff9800', group: null },
+  { id:'casino',      name:'Casino',      ico:'🎰', col:'#ffd700', group: null },
 
   // 🎮 Games
   { id:'snake',       name:'Snake',       ico:'🐍', col:'#69ff47',  group:'games' },
@@ -68,6 +69,7 @@ const APP_MAP = {
   visualizer:  () => initVisualizer(),
   deviceinfo:  () => initDeviceInfo(),
   sports:      () => initSports(),
+  casino:      () => initCasino(),
 };
 
 /* ── HOME DATE ────────────────────────────────────────────────── */
