@@ -94,42 +94,76 @@ function initCasino() {
   body.appendChild(lobbyPanel);
 
   const GAMES = [
-    {id:'slots',     name:'Slot Machine', ico:'🎰', desc:'3 reels · Match symbols to win',    col:'#ffd700', grad:'linear-gradient(135deg,#4a2800,#1a0a00)'},
-    {id:'hilo',      name:'Hi-Lo',        ico:'🃏', desc:'Higher or lower than the last card?', col:'#e53935', grad:'linear-gradient(135deg,#2a0000,#0a0000)'},
-    {id:'blackjack', name:'Blackjack',    ico:'♠️', desc:'Beat the dealer · Get to 21',         col:'#00ffcc', grad:'linear-gradient(135deg,#003320,#000a08)'},
+    {id:'slots',     name:'Slot Machine', ico:'🎰', desc:'3 reels · Match to win',         col:'#ffd700', grad:'linear-gradient(145deg,#3d2000,#1a0d00)', jackpot:'50×'},
+    {id:'hilo',      name:'Hi-Lo',        ico:'🃏', desc:'Higher or lower?',               col:'#ff6b6b', grad:'linear-gradient(145deg,#2a0010,#0a0005)', jackpot:'×streak'},
+    {id:'blackjack', name:'Blackjack',    ico:'♠️', desc:'Beat the dealer to 21',           col:'#00ffcc', grad:'linear-gradient(145deg,#003322,#000f0a)', jackpot:'1.5×'},
   ];
 
+  // Balance card at top
+  const balCard = document.createElement('div');
+  balCard.style.cssText = `
+    margin-bottom:18px;padding:20px 20px 16px;border-radius:22px;
+    background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,140,0,.04));
+    border:1px solid rgba(255,215,0,.2);
+    box-shadow:0 0 30px rgba(255,215,0,.06);
+    text-align:center;position:relative;overflow:hidden;`;
+  balCard.innerHTML = `
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#ffd700,transparent);"></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:rgba(255,215,0,.45);letter-spacing:.22em;text-transform:uppercase;margin-bottom:8px;">Your Balance</div>
+    <div id="cs-lobby-bal" style="font-family:'Orbitron',sans-serif;font-size:2.4rem;font-weight:900;color:#ffd700;text-shadow:0 0 24px rgba(255,215,0,.6);letter-spacing:.04em;">🪙 ${_casinoCoins.toLocaleString()}</div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+      <button id="cs-refill" style="font-family:'Orbitron',sans-serif;font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:7px 18px;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;">↑ Refill to 1,000</button>
+    </div>`;
+  lobbyPanel.appendChild(balCard);
+
+  // Section label
   const lobbyHdr = document.createElement('div');
-  lobbyHdr.style.cssText = 'font-family:"Share Tech Mono",monospace;font-size:.62rem;color:var(--dim);letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px;';
-  lobbyHdr.textContent = 'Choose a game';
+  lobbyHdr.style.cssText = 'font-family:"Orbitron",sans-serif;font-size:.52rem;color:var(--dim);letter-spacing:.22em;text-transform:uppercase;margin-bottom:12px;padding:0 2px;';
+  lobbyHdr.textContent = '// Games //';
   lobbyPanel.appendChild(lobbyHdr);
 
-  GAMES.forEach(g => {
+  GAMES.forEach((g, idx) => {
     const card = document.createElement('div');
-    card.style.cssText = `padding:22px 20px;border-radius:22px;background:${g.grad};border:1px solid ${g.col}40;box-shadow:0 4px 24px rgba(0,0,0,.5);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s;position:relative;overflow:hidden;`;
+    card.style.cssText = `
+      padding:0;border-radius:24px;
+      background:${g.grad};
+      border:1px solid ${g.col}35;
+      box-shadow:0 6px 28px rgba(0,0,0,.55),0 0 0 0 ${g.col};
+      cursor:pointer;-webkit-tap-highlight-color:transparent;
+      transition:transform .14s,box-shadow .14s;
+      position:relative;overflow:hidden;
+      animation:sp-fade-in .4s ${idx*.1}s both;`;
     card.innerHTML = `
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${g.col},transparent);"></div>
-      <div style="display:flex;align-items:center;gap:16px;">
-        <div style="font-size:2.8rem;line-height:1;flex-shrink:0;">${g.ico}</div>
-        <div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.06em;color:${g.col};margin-bottom:5px;">${g.name}</div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.4);letter-spacing:.06em;">${g.desc}</div>
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,${g.col}cc,transparent);"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 20% 30%,rgba(255,255,255,.04),transparent 60%);pointer-events:none;"></div>
+      <div style="display:flex;align-items:center;gap:0;padding:20px 20px;">
+        <!-- Big icon -->
+        <div style="width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:2.2rem;flex-shrink:0;margin-right:16px;">
+          ${g.ico}
         </div>
-        <div style="margin-left:auto;font-size:1.4rem;color:${g.col};opacity:.5;">›</div>
+        <!-- Info -->
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;letter-spacing:.06em;color:#fff;margin-bottom:4px;">${g.name}</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:rgba(255,255,255,.35);letter-spacing:.05em;">${g.desc}</div>
+          <div style="margin-top:7px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid ${g.col}40;padding:3px 10px;border-radius:8px;">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:${g.col};letter-spacing:.08em;text-transform:uppercase;">Max payout</span>
+            <span style="font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:900;color:${g.col};">${g.jackpot}</span>
+          </div>
+        </div>
+        <!-- Arrow -->
+        <div style="font-size:1.6rem;color:${g.col};opacity:.4;flex-shrink:0;margin-left:8px;">›</div>
       </div>`;
-    card.addEventListener('touchstart', ()=>card.style.transform='scale(.97)', {passive:true});
-    card.addEventListener('touchend',   ()=>card.style.transform='',           {passive:true});
+    card.addEventListener('touchstart', () => {
+      card.style.transform='scale(.97)';
+      card.style.boxShadow=`0 2px 14px rgba(0,0,0,.4),0 0 22px ${g.col}33`;
+    }, {passive:true});
+    card.addEventListener('touchend', () => {
+      card.style.transform='';
+      card.style.boxShadow=`0 6px 28px rgba(0,0,0,.55)`;
+    }, {passive:true});
     card.addEventListener('click', () => openGame(g.id));
     lobbyPanel.appendChild(card);
   });
-
-  const balCard = document.createElement('div');
-  balCard.style.cssText = 'margin-top:8px;padding:18px 20px;border-radius:18px;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);text-align:center;';
-  balCard.innerHTML = `
-    <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:rgba(255,215,0,.5);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px;">Your Balance</div>
-    <div id="cs-lobby-bal" style="font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px rgba(255,215,0,.5);">🪙 ${_casinoCoins.toLocaleString()}</div>
-    <button id="cs-refill" style="margin-top:10px;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3);background:transparent;border:1px solid rgba(255,255,255,.08);padding:6px 16px;border-radius:12px;cursor:pointer;">Refill to 1,000</button>`;
-  lobbyPanel.appendChild(balCard);
 
   document.getElementById('cs-refill').onclick = () => {
     if (_casinoCoins < 1000) { updateWallet(1000 - _casinoCoins, balCard); haptic('success'); }

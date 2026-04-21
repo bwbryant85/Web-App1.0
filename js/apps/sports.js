@@ -4,26 +4,59 @@
    ════════════════════════════════════════ */
 function initSports() {
 
-  /* ── Sport definitions ── */
-  const SPORTS = [
-    { id:'nfl',         name:'NFL',          sport:'football',      league:'nfl',           ico:'🏈', col:'#004C97' },
-    { id:'nba',         name:'NBA',          sport:'basketball',    league:'nba',            ico:'🏀', col:'#C9082A' },
-    { id:'mlb',         name:'MLB',          sport:'baseball',      league:'mlb',            ico:'⚾', col:'#002D72' },
-    { id:'nhl',         name:'NHL',          sport:'hockey',        league:'nhl',            ico:'🏒', col:'#0033A0' },
-    { id:'wnba',        name:'WNBA',         sport:'basketball',    league:'wnba',           ico:'🏀', col:'#FF6900' },
-    { id:'mls',         name:'MLS',          sport:'soccer',        league:'usa.1',          ico:'⚽', col:'#005293' },
-    { id:'epl',         name:'Premier Lg',   sport:'soccer',        league:'eng.1',          ico:'⚽', col:'#3D195B' },
-    { id:'laliga',      name:'La Liga',       sport:'soccer',        league:'esp.1',          ico:'⚽', col:'#EE3524' },
-    { id:'bundesliga',  name:'Bundesliga',    sport:'soccer',        league:'ger.1',          ico:'⚽', col:'#D3010C' },
-    { id:'seriea',      name:'Serie A',       sport:'soccer',        league:'ita.1',          ico:'⚽', col:'#024494' },
-    { id:'ucl',         name:'Champions Lg',  sport:'soccer',        league:'uefa.champions', ico:'⭐', col:'#001489' },
-    { id:'ncaaf',       name:'College FB',    sport:'football',      league:'college-football',ico:'🏈',col:'#BF5700' },
-    { id:'ncaab',       name:'College BB',    sport:'basketball',    league:'mens-college-basketball',ico:'🏀',col:'#003087' },
-    { id:'f1',          name:'Formula 1',     sport:'racing',        league:'f1',             ico:'🏎️', col:'#E8002D' },
-    { id:'mma',         name:'MMA / UFC',     sport:'mma',           league:'ufc',            ico:'🥊', col:'#D20A0A' },
-    { id:'golf',        name:'Golf / PGA',    sport:'golf',          league:'pga',            ico:'⛳', col:'#00843D' },
-    { id:'tennis',      name:'Tennis / ATP',  sport:'tennis',        league:'atp',            ico:'🎾', col:'#C8A951' },
+  /* ── Sport definitions grouped by category ── */
+  const SPORT_GROUPS = [
+    {
+      label:'🏀 Basketball', col:'#C9082A',
+      sports:[
+        { id:'nba',   name:'NBA',        sport:'basketball', league:'nba',                      ico:'🏀', col:'#C9082A' },
+        { id:'wnba',  name:'WNBA',       sport:'basketball', league:'wnba',                     ico:'🏀', col:'#FF6900' },
+        { id:'ncaab', name:'College BB', sport:'basketball', league:'mens-college-basketball',  ico:'🏀', col:'#003087' },
+      ]
+    },
+    {
+      label:'⚽ Soccer', col:'#3D195B',
+      sports:[
+        { id:'mls',        name:'MLS',          sport:'soccer', league:'usa.1',          ico:'⚽', col:'#005293' },
+        { id:'epl',        name:'Premier Lg',   sport:'soccer', league:'eng.1',          ico:'⚽', col:'#3D195B' },
+        { id:'laliga',     name:'La Liga',      sport:'soccer', league:'esp.1',          ico:'⚽', col:'#EE3524' },
+        { id:'bundesliga', name:'Bundesliga',   sport:'soccer', league:'ger.1',          ico:'⚽', col:'#D3010C' },
+        { id:'seriea',     name:'Serie A',      sport:'soccer', league:'ita.1',          ico:'⚽', col:'#024494' },
+        { id:'ucl',        name:'Champions Lg', sport:'soccer', league:'uefa.champions', ico:'⭐', col:'#001489' },
+      ]
+    },
+    {
+      label:'🏈 Football', col:'#004C97',
+      sports:[
+        { id:'nfl',   name:'NFL',        sport:'football', league:'nfl',              ico:'🏈', col:'#004C97' },
+        { id:'ncaaf', name:'College FB', sport:'football', league:'college-football', ico:'🏈', col:'#BF5700' },
+      ]
+    },
+    {
+      label:'⚾ Baseball', col:'#002D72',
+      sports:[
+        { id:'mlb', name:'MLB', sport:'baseball', league:'mlb', ico:'⚾', col:'#002D72' },
+      ]
+    },
+    {
+      label:'🏒 Hockey', col:'#0033A0',
+      sports:[
+        { id:'nhl', name:'NHL', sport:'hockey', league:'nhl', ico:'🏒', col:'#0033A0' },
+      ]
+    },
+    {
+      label:'🏁 Racing & More', col:'#E8002D',
+      sports:[
+        { id:'f1',     name:'Formula 1',  sport:'racing', league:'f1',  ico:'🏎️', col:'#E8002D' },
+        { id:'mma',    name:'MMA / UFC',  sport:'mma',    league:'ufc', ico:'🥊', col:'#D20A0A' },
+        { id:'golf',   name:'Golf / PGA', sport:'golf',   league:'pga', ico:'⛳', col:'#00843D' },
+        { id:'tennis', name:'Tennis',     sport:'tennis', league:'atp', ico:'🎾', col:'#C8A951' },
+      ]
+    },
   ];
+
+  // Flat list for lookup
+  const SPORTS = SPORT_GROUPS.flatMap(g => g.sports);
 
   /* ── State ── */
   let selectedSport = null;
@@ -107,41 +140,64 @@ function initSports() {
     } catch(e) { return '—'; }
   };
 
-  /* ════ BUILD SPORT GRID ════ */
+  /* ════ BUILD SPORT GRID (grouped) ════ */
   const buildGrid = () => {
     gridPanel.innerHTML = '';
-    const grid = document.createElement('div');
-    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:11px;';
+    let delay = 0;
 
-    SPORTS.forEach((sp, i) => {
-      const card = document.createElement('div');
-      card.style.cssText = `
-        display:flex;align-items:center;gap:12px;
-        padding:15px 14px;border-radius:18px;
-        background:rgba(255,255,255,.03);
-        border:1px solid ${sp.col}40;
-        box-shadow:0 0 20px ${sp.col}12;
-        cursor:pointer;-webkit-tap-highlight-color:transparent;
-        transition:transform .15s,background .15s;
-        animation:sp-fade-in .4s ${i * .04}s both;
-        position:relative;overflow:hidden;
+    SPORT_GROUPS.forEach(group => {
+      // Group header
+      const groupHdr = document.createElement('div');
+      groupHdr.style.cssText = `
+        display:flex;align-items:center;gap:10px;
+        padding:14px 2px 8px;
+        font-family:'Orbitron',sans-serif;font-size:.72rem;font-weight:900;
+        letter-spacing:.12em;text-transform:uppercase;
+        color:${group.col};text-shadow:0 0 12px ${group.col}88;
       `;
-      // Accent glow top edge
-      card.innerHTML = `
-        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${sp.col},transparent);border-radius:2px 2px 0 0;"></div>
-        <span style="font-size:1.8rem;line-height:1;flex-shrink:0;">${sp.ico}</span>
-        <div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text);line-height:1.3;">${sp.name}</div>
-        </div>
-        <div style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:.7rem;color:${sp.col};opacity:.5;">›</div>`;
+      groupHdr.innerHTML = `<span>${group.label}</span>
+        <div style="flex:1;height:1px;background:linear-gradient(90deg,${group.col}55,transparent);margin-left:4px;"></div>`;
+      gridPanel.appendChild(groupHdr);
 
-      card.addEventListener('touchstart', () => { card.style.transform = 'scale(.96)'; card.style.background = `${sp.col}18`; }, { passive:true });
-      card.addEventListener('touchend',   () => { card.style.transform = ''; card.style.background = 'rgba(255,255,255,.03)'; }, { passive:true });
-      card.addEventListener('click', () => openSport(sp));
-      grid.appendChild(card);
+      // Sport cards in a horizontal scrollable row
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:4px;';
+      row.style.setProperty('--webkit-overflow-scrolling','touch');
+
+      group.sports.forEach((sp, i) => {
+        const card = document.createElement('div');
+        card.style.cssText = `
+          flex-shrink:0;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+          width:100px;padding:14px 10px;border-radius:18px;
+          background:rgba(255,255,255,.03);
+          border:1px solid ${sp.col}50;
+          box-shadow:0 0 18px ${sp.col}14,inset 0 1px 0 rgba(255,255,255,.06);
+          cursor:pointer;-webkit-tap-highlight-color:transparent;
+          transition:transform .15s,box-shadow .15s;
+          position:relative;overflow:hidden;
+          animation:sp-fade-in .4s ${delay * .06}s both;
+        `;
+        card.innerHTML = `
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,${sp.col},transparent);"></div>
+          <span style="font-size:2rem;line-height:1;">${sp.ico}</span>
+          <div style="font-family:'Orbitron',sans-serif;font-size:.48rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text);text-align:center;line-height:1.3;">${sp.name}</div>`;
+
+        card.addEventListener('touchstart', () => {
+          card.style.transform = 'scale(.93)';
+          card.style.boxShadow = `0 0 28px ${sp.col}55,inset 0 1px 0 rgba(255,255,255,.06)`;
+        }, { passive:true });
+        card.addEventListener('touchend', () => {
+          card.style.transform = '';
+          card.style.boxShadow = `0 0 18px ${sp.col}14,inset 0 1px 0 rgba(255,255,255,.06)`;
+        }, { passive:true });
+        card.addEventListener('click', () => openSport(sp));
+        row.appendChild(card);
+        delay++;
+      });
+
+      gridPanel.appendChild(row);
     });
-
-    gridPanel.appendChild(grid);
   };
 
   /* ════ BUILD DATE STRIP ════ */

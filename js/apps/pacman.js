@@ -191,34 +191,38 @@ function initPacman() {
   };
 
   const updatePac = dt => {
-    // Mouth
+    // Mouth animation always runs
     mouthA += mouthDir * dt * 4.0;
     if (mouthA > 0.7) mouthDir = -1;
     if (mouthA < 0.04) mouthDir = 1;
 
-    if (pProg < 1.0) {
-      pProg += PAC_SPEED * dt;
-      if (pProg >= 1.0) {
-        pProg = 1.0;
-        // Arrived — snap row/col, handle tunnel
-        pR = pNR;
-        pC = wrapC(pNC);
-        pNR = pR; pNC = pC;
-        // Eat
-        const v = maze[pR][pC];
-        if (v === 2) {
-          maze[pR][pC] = 0; score += 10; pelletsLeft--;
-          if (pelletsLeft <= 0) { gameState = 'levelup'; haptic('success'); return; }
-        } else if (v === 3) {
-          maze[pR][pC] = 0; score += 50; pelletsLeft--;
-          frightTotal = Math.max(5, 12 - (level - 1) * 1.5);
-          frightSec   = frightTotal;
-          eatCombo    = 0;
-          ghosts.forEach(g => { if (g.mode !== 'eaten' && g.mode !== 'house') g.mode = 'frightened'; });
-          if (pelletsLeft <= 0) { gameState = 'levelup'; haptic('success'); return; }
-        }
-        pickNextPac();
+    // If stopped at a wall, keep trying queued direction every frame
+    if (pProg >= 1.0) {
+      pickNextPac();
+      return;
+    }
+
+    pProg += PAC_SPEED * dt;
+    if (pProg >= 1.0) {
+      pProg = 1.0;
+      // Arrived — snap, tunnel wrap
+      pR = pNR;
+      pC = wrapC(pNC);
+      pNR = pR; pNC = pC;
+      // Eat cell
+      const v = maze[pR][pC];
+      if (v === 2) {
+        maze[pR][pC] = 0; score += 10; pelletsLeft--;
+        if (pelletsLeft <= 0) { gameState = 'levelup'; haptic('success'); return; }
+      } else if (v === 3) {
+        maze[pR][pC] = 0; score += 50; pelletsLeft--;
+        frightTotal = Math.max(5, 12 - (level - 1) * 1.5);
+        frightSec   = frightTotal;
+        eatCombo    = 0;
+        ghosts.forEach(g => { if (g.mode !== 'eaten' && g.mode !== 'house') g.mode = 'frightened'; });
+        if (pelletsLeft <= 0) { gameState = 'levelup'; haptic('success'); return; }
       }
+      pickNextPac();
     }
   };
 
@@ -368,8 +372,16 @@ function initPacman() {
         return;
       }
     }
-    // Truly stuck — stay
-    g.nr = g.r; g.nc = g.c; g.prog = 1.0;
+    // BFS gave nothing valid — try ALL 4 directions, allow reversal too
+    for (const d of DIRS) {
+      if (passable(g.r + d.r, g.c + d.c, true, g.mode)) {
+        g.dr = d.r; g.dc = d.c;
+        g.nr = g.r + d.r; g.nc = g.c + d.c; g.prog = 0;
+        return;
+      }
+    }
+    // Completely boxed in (should never happen in valid maze) — teleport to nearest open
+    g.prog = 0.01; // tiny progress so we don't spin here forever
   };
 
   let modeTimer = 0;
@@ -405,7 +417,7 @@ function initPacman() {
 
       g.prog += gSpeed(g) * dt;
       if (g.prog >= 1.0) {
-        g.prog = 1.0;
+        g.prog = 0; // reset BEFORE snap so pickNextGhost starts fresh move
         g.r = g.nr; g.c = wrapC(g.nc);
         g.nr = g.r; g.nc = g.c;
 
