@@ -188,17 +188,21 @@ function initCasino() {
     document.getElementById('cs-back').style.display = '';
     lobbyPanel.style.transition = 'transform .32s cubic-bezier(.34,1.56,.64,1)';
     lobbyPanel.style.transform  = 'translateX(-100%)';
+
+    // If slots already built, tear down canvas loop and rebuild so credits are fresh
+    if (id === 'slots' && gamePanels[id] && gamePanels[id]._slotCleanup) {
+      gamePanels[id]._slotCleanup();
+      gamePanels[id].innerHTML = '';
+      buildSlots(gamePanels[id]);
+      gamePanels[id].style.transform = 'translateX(0)';
+      return;
+    }
+
     if (!gamePanels[id]) {
       gamePanels[id] = makePanel();
-      if (id==='slots')     buildSlots(gamePanels[id]);
-    } else if (id==='slots' && gamePanels[id]._slotCleanup) {
-      // Re-open: rebuild so credits sync with wallet
-      gamePanels[id]._slotCleanup();
-      gamePanels[id].innerHTML='';
-      buildSlots(gamePanels[id]);
-      gamePanels[id].style.transform='translateX(0)'; return;
-      if (id==='hilo')      buildHiLo(gamePanels[id]);
-      if (id==='blackjack') buildBlackjack(gamePanels[id]);
+      if (id === 'slots')     buildSlots(gamePanels[id]);
+      if (id === 'hilo')      buildHiLo(gamePanels[id]);
+      if (id === 'blackjack') buildBlackjack(gamePanels[id]);
     }
     gamePanels[id].style.transform = 'translateX(0)';
   };
@@ -561,11 +565,9 @@ function initCasino() {
 
       /* ── BUTTONS ── */
       const btnData = [
-        { label:'INSERT
-COIN', col:'#ffd700', id:'btn-coin', x:.22 },
+        { label:'INSERT\nCOIN', col:'#ffd700', id:'btn-coin', x:.22 },
         { label:'SPIN', col:'#ff2222', id:'btn-spin', x:.5 },
-        { label:'MAX
-BET', col:'#ffd700', id:'btn-max', x:.78 },
+        { label:'MAX\nBET', col:'#ffd700', id:'btn-max', x:.78 },
       ];
       const btnR = CW * .065;
       btnData.forEach(b => {
@@ -590,8 +592,7 @@ BET', col:'#ffd700', id:'btn-max', x:.78 },
         ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fill();
 
         // Label
-        const lines = b.label.split('
-');
+        const lines = b.label.split('\n');
         ctx.font = `700 ${CW*.028}px 'Orbitron',sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = b.col==='#ff2222'?'#fff':'#111';
