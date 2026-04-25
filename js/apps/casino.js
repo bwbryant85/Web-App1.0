@@ -182,20 +182,18 @@ document.getElementById(‘cs-back’).addEventListener(‘click’, closeGame);
 
 /* ════ SLOT MACHINE — Crazy Diamonds ════ */
 const buildSlots = wrap => {
-wrap.style.cssText = ‘display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:#111;overflow:hidden;position:relative;width:100%;height:100%;min-height:500px;’;
+wrap.style.cssText = ‘position:absolute;inset:0;background:#111;overflow:hidden;’;
 
 ```
+const appEl = document.getElementById('app-content');
+const CW = Math.min(appEl ? appEl.offsetWidth : window.innerWidth, 390);
+const CH = Math.min(appEl ? appEl.offsetHeight : window.innerHeight, Math.round(CW * 1.72));
+
 const cv = document.createElement('canvas');
-const rect0 = wrap.getBoundingClientRect();
-const CW = Math.min(rect0.width  > 10 ? rect0.width  : (window.innerWidth  || 360), 390);
-const CH = Math.min(rect0.height > 10 ? rect0.height : (window.innerHeight || 660), Math.round(CW * 1.72));
 cv.width = CW; cv.height = CH;
-cv.style.cssText = 'display:block;width:' + CW + 'px;height:' + CH + 'px;touch-action:none;-webkit-tap-highlight-color:transparent;';
+cv.style.cssText = 'display:block;position:absolute;top:0;left:0;width:'+CW+'px;height:'+CH+'px;touch-action:none;-webkit-tap-highlight-color:transparent;';
 wrap.appendChild(cv);
 const ctx = cv.getContext('2d');
-// Immediate red test — proves canvas is mounted and drawing works
-ctx.fillStyle = '#ff0000'; ctx.fillRect(0, 0, CW, CH);
-
 // Coin DOM overlay
 const coinLayer = document.createElement('div');
 coinLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:10;';
