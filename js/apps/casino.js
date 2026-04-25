@@ -182,17 +182,19 @@ document.getElementById(‘cs-back’).addEventListener(‘click’, closeGame);
 
 /* ════ SLOT MACHINE — Crazy Diamonds ════ */
 const buildSlots = wrap => {
-wrap.style.cssText = ‘display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:#111;overflow:hidden;position:relative;width:100%;height:100%;’;
+wrap.style.cssText = ‘display:flex;flex-direction:column;align-items:center;justify-content:flex-start;background:#111;overflow:hidden;position:relative;width:100%;height:100%;min-height:500px;’;
 
 ```
 const cv = document.createElement('canvas');
-
-const CW = Math.min(wrap.clientWidth || 360, 390);
-const CH = Math.min(wrap.clientHeight || 660, Math.round(CW * 1.72));
+const rect0 = wrap.getBoundingClientRect();
+const CW = Math.min(rect0.width  > 10 ? rect0.width  : (window.innerWidth  || 360), 390);
+const CH = Math.min(rect0.height > 10 ? rect0.height : (window.innerHeight || 660), Math.round(CW * 1.72));
 cv.width = CW; cv.height = CH;
-cv.style.cssText = 'display:block;touch-action:none;-webkit-tap-highlight-color:transparent;';
+cv.style.cssText = 'display:block;width:' + CW + 'px;height:' + CH + 'px;touch-action:none;-webkit-tap-highlight-color:transparent;';
 wrap.appendChild(cv);
 const ctx = cv.getContext('2d');
+// Immediate red test — proves canvas is mounted and drawing works
+ctx.fillStyle = '#ff0000'; ctx.fillRect(0, 0, CW, CH);
 
 // Coin DOM overlay
 const coinLayer = document.createElement('div');
@@ -781,10 +783,13 @@ const animLoop = ts => {
     leverY = Math.max(0, leverY + leverVel*0.09);
     if (leverY<0.008 && Math.abs(leverVel)<0.01) { leverY=0; leverVel=0; }
   }
-  draw();
+  try { draw(); } catch(e) { console.error('SLOT DRAW ERROR:', e.message, e.stack); }
   rafId = requestAnimationFrame(animLoop);
 };
-requestAnimationFrame(() => { rafId = requestAnimationFrame(animLoop); });
+// Triple rAF: guarantees layout done, panel painted, then loop starts
+requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+  rafId = requestAnimationFrame(animLoop);
+})));
 
 // -- Input helpers --
 const getPos = e => {
