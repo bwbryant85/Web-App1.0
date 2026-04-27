@@ -84,38 +84,30 @@ lobbyPanel.style.cssText = ‘position:absolute;inset:0;overflow-y:auto;-webkit-
 body.appendChild(lobbyPanel);
 
 const GAMES = [
-{id:‘slots’,     name:‘Slot Machine’, ico:‘🎰’, desc:‘3 reels · Match to win’,         col:’#ffd700’, grad:‘linear-gradient(145deg,#3d2000,#1a0d00)’, jackpot:‘50×’},
-{id:‘hilo’,      name:‘Hi-Lo’,        ico:‘🃏’, desc:‘Higher or lower?’,               col:’#ff6b6b’, grad:‘linear-gradient(145deg,#2a0010,#0a0005)’, jackpot:‘×streak’},
-{id:‘blackjack’, name:‘Blackjack’,    ico:‘♠️’, desc:‘Beat the dealer to 21’,           col:’#00ffcc’, grad:‘linear-gradient(145deg,#003322,#000f0a)’, jackpot:‘1.5×’},
+{id:‘slots’,     name:‘Slot Machine’, ico:‘🎰’, desc:‘3 reels · Match symbols to win’,    col:’#ffd700’, grad:‘linear-gradient(135deg,#4a2800,#1a0a00)’},
+{id:‘hilo’,      name:‘Hi-Lo’,        ico:‘🃏’, desc:‘Higher or lower than the last card?’, col:’#e53935’, grad:‘linear-gradient(135deg,#2a0000,#0a0000)’},
+{id:‘blackjack’, name:‘Blackjack’,    ico:‘♠️’, desc:‘Beat the dealer · Get to 21’,         col:’#00ffcc’, grad:‘linear-gradient(135deg,#003320,#000a08)’},
 ];
 
-// Balance card at top
-const balCard = document.createElement(‘div’);
-balCard.style.cssText = ` margin-bottom:18px;padding:20px 20px 16px;border-radius:22px; background:linear-gradient(135deg,rgba(255,215,0,.08),rgba(255,140,0,.04)); border:1px solid rgba(255,215,0,.2); box-shadow:0 0 30px rgba(255,215,0,.06); text-align:center;position:relative;overflow:hidden;`;
-balCard.innerHTML = ` <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#ffd700,transparent);"></div> <div style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:rgba(255,215,0,.45);letter-spacing:.22em;text-transform:uppercase;margin-bottom:8px;">Your Balance</div> <div id="cs-lobby-bal" style="font-family:'Orbitron',sans-serif;font-size:2.4rem;font-weight:900;color:#ffd700;text-shadow:0 0 24px rgba(255,215,0,.6);letter-spacing:.04em;">🪙 ${_casinoCoins.toLocaleString()}</div> <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;"> <button id="cs-refill" style="font-family:'Orbitron',sans-serif;font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:7px 18px;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;">↑ Refill to 1,000</button> </div>`;
-lobbyPanel.appendChild(balCard);
-
-// Section label
 const lobbyHdr = document.createElement(‘div’);
-lobbyHdr.style.cssText = ‘font-family:“Orbitron”,sans-serif;font-size:.52rem;color:var(–dim);letter-spacing:.22em;text-transform:uppercase;margin-bottom:12px;padding:0 2px;’;
-lobbyHdr.textContent = ‘// Games //’;
+lobbyHdr.style.cssText = ‘font-family:“Share Tech Mono”,monospace;font-size:.62rem;color:var(–dim);letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px;’;
+lobbyHdr.textContent = ‘Choose a game’;
 lobbyPanel.appendChild(lobbyHdr);
 
-GAMES.forEach((g, idx) => {
+GAMES.forEach(g => {
 const card = document.createElement(‘div’);
-card.style.cssText = ` padding:0;border-radius:24px; background:${g.grad}; border:1px solid ${g.col}35; box-shadow:0 6px 28px rgba(0,0,0,.55),0 0 0 0 ${g.col}; cursor:pointer;-webkit-tap-highlight-color:transparent; transition:transform .14s,box-shadow .14s; position:relative;overflow:hidden; animation:sp-fade-in .4s ${idx*.1}s both;`;
-card.innerHTML = ` <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,${g.col}cc,transparent);"></div> <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 20% 30%,rgba(255,255,255,.04),transparent 60%);pointer-events:none;"></div> <div style="display:flex;align-items:center;gap:0;padding:20px 20px;"> <!-- Big icon --> <div style="width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:2.2rem;flex-shrink:0;margin-right:16px;"> ${g.ico} </div> <!-- Info --> <div style="flex:1;min-width:0;"> <div style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;letter-spacing:.06em;color:#fff;margin-bottom:4px;">${g.name}</div> <div style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:rgba(255,255,255,.35);letter-spacing:.05em;">${g.desc}</div> <div style="margin-top:7px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid ${g.col}40;padding:3px 10px;border-radius:8px;"> <span style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:${g.col};letter-spacing:.08em;text-transform:uppercase;">Max payout</span> <span style="font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:900;color:${g.col};">${g.jackpot}</span> </div> </div> <!-- Arrow --> <div style="font-size:1.6rem;color:${g.col};opacity:.4;flex-shrink:0;margin-left:8px;">›</div> </div>`;
-card.addEventListener(‘touchstart’, () => {
-card.style.transform=‘scale(.97)’;
-card.style.boxShadow=`0 2px 14px rgba(0,0,0,.4),0 0 22px ${g.col}33`;
-}, {passive:true});
-card.addEventListener(‘touchend’, () => {
-card.style.transform=’’;
-card.style.boxShadow=`0 6px 28px rgba(0,0,0,.55)`;
-}, {passive:true});
+card.style.cssText = `padding:22px 20px;border-radius:22px;background:${g.grad};border:1px solid ${g.col}40;box-shadow:0 4px 24px rgba(0,0,0,.5);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s;position:relative;overflow:hidden;`;
+card.innerHTML = ` <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${g.col},transparent);"></div> <div style="display:flex;align-items:center;gap:16px;"> <div style="font-size:2.8rem;line-height:1;flex-shrink:0;">${g.ico}</div> <div> <div style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.06em;color:${g.col};margin-bottom:5px;">${g.name}</div> <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.4);letter-spacing:.06em;">${g.desc}</div> </div> <div style="margin-left:auto;font-size:1.4rem;color:${g.col};opacity:.5;">›</div> </div>`;
+card.addEventListener(‘touchstart’, ()=>card.style.transform=‘scale(.97)’, {passive:true});
+card.addEventListener(‘touchend’,   ()=>card.style.transform=’’,           {passive:true});
 card.addEventListener(‘click’, () => openGame(g.id));
 lobbyPanel.appendChild(card);
 });
+
+const balCard = document.createElement(‘div’);
+balCard.style.cssText = ‘margin-top:8px;padding:18px 20px;border-radius:18px;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);text-align:center;’;
+balCard.innerHTML = ` <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:rgba(255,215,0,.5);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px;">Your Balance</div> <div id="cs-lobby-bal" style="font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px rgba(255,215,0,.5);">🪙 ${_casinoCoins.toLocaleString()}</div> <button id="cs-refill" style="margin-top:10px;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3);background:transparent;border:1px solid rgba(255,255,255,.08);padding:6px 16px;border-radius:12px;cursor:pointer;">Refill to 1,000</button>`;
+lobbyPanel.appendChild(balCard);
 
 document.getElementById(‘cs-refill’).onclick = () => {
 if (_casinoCoins < 1000) { updateWallet(1000 - _casinoCoins, balCard); haptic(‘success’); }
@@ -140,35 +132,18 @@ document.getElementById(‘cs-title’).style.cssText = ‘font-family:“Orbitr
 document.getElementById(‘cs-back’).style.display = ‘’;
 lobbyPanel.style.transition = ‘transform .32s cubic-bezier(.34,1.56,.64,1)’;
 lobbyPanel.style.transform  = ‘translateX(-100%)’;
-
-```
-// Show panel first so layout is calculated, then build
 if (!gamePanels[id]) {
-  gamePanels[id] = makePanel();
-} else if (id === 'slots' && gamePanels[id]._slotCleanup) {
-  gamePanels[id]._slotCleanup();
-  gamePanels[id].innerHTML = '';
+gamePanels[id] = makePanel();
+if (id===‘slots’)     buildSlots(gamePanels[id]);
+if (id===‘hilo’)      buildHiLo(gamePanels[id]);
+if (id===‘blackjack’) buildBlackjack(gamePanels[id]);
 }
-
-gamePanels[id].style.transform = 'translateX(0)';
-
-// Build AFTER panel is visible so wrap.clientWidth/Height are real
-requestAnimationFrame(() => {
-  if (id === 'slots' && !gamePanels[id]._slotCleanup) buildSlots(gamePanels[id]);
-  else if (id === 'slots') buildSlots(gamePanels[id]);
-  else if (id === 'hilo' && !gamePanels[id]._hiloBuilt) { buildHiLo(gamePanels[id]); gamePanels[id]._hiloBuilt = true; }
-  else if (id === 'blackjack' && !gamePanels[id]._bjBuilt) { buildBlackjack(gamePanels[id]); gamePanels[id]._bjBuilt = true; }
-});
-```
-
+gamePanels[id].style.transform = ‘translateX(0)’;
 };
 
 const closeGame = () => {
 haptic(‘light’);
-if (gamePanels[activeGame]) {
-if (activeGame===‘slots’ && gamePanels[activeGame]._slotCleanup) gamePanels[activeGame]._slotCleanup();
-gamePanels[activeGame].style.transform = ‘translateX(100%)’;
-}
+if (gamePanels[activeGame]) gamePanels[activeGame].style.transform = ‘translateX(100%)’;
 lobbyPanel.style.transform = ‘translateX(0)’;
 document.getElementById(‘cs-title’).innerHTML = ‘’;
 document.getElementById(‘cs-title’).style.cssText = ‘font-family:“Orbitron”,sans-serif;font-size:1.05rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex:1;’;
@@ -180,53 +155,61 @@ refreshWalletDisplay();
 
 document.getElementById(‘cs-back’).addEventListener(‘click’, closeGame);
 
-/* ════ SLOT MACHINE — Crazy Diamonds ════ */
+/* ════ SLOT MACHINE ════ */
 const buildSlots = wrap => {
-wrap.style.cssText = ‘position:absolute;inset:0;background:#111;overflow:hidden;’;
+// ── DOM scaffold (no canvas sizing issues — pure DOM layout) ──
+wrap.innerHTML = ‘’;
+wrap.style.cssText = ‘position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#0a0600;display:flex;flex-direction:column;align-items:center;’;
 
 ```
-const appEl = document.getElementById('app-content');
-const CW = Math.min(appEl ? appEl.offsetWidth : window.innerWidth, 390);
-const CH = Math.min(appEl ? appEl.offsetHeight : window.innerHeight, Math.round(CW * 1.72));
+// Coin overlay
+const coinLayer = document.createElement('div');
+coinLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9999;';
+document.body.appendChild(coinLayer);
+
+// Canvas container — sized after insertion so layout is real
+const container = document.createElement('div');
+container.style.cssText = 'width:100%;flex-shrink:0;';
+wrap.appendChild(container);
 
 const cv = document.createElement('canvas');
-cv.width = CW; cv.height = CH;
-cv.style.cssText = 'display:block;position:absolute;top:0;left:0;width:'+CW+'px;height:'+CH+'px;touch-action:none;-webkit-tap-highlight-color:transparent;';
-wrap.appendChild(cv);
+container.appendChild(cv);
 const ctx = cv.getContext('2d');
-// Coin DOM overlay
-const coinLayer = document.createElement('div');
-coinLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:10;';
-wrap.appendChild(coinLayer);
 
-// ── Layout ──
-const G   = CW * 0.050;
-const CX  = CW * 0.038;
-const CY  = CH * 0.010;
-const CaW = CW * 0.920;
-const CaH = CH * 0.970;
-const iX  = CX + G;
-const iW  = CaW - G * 2;
+// Size canvas to container AFTER it is in DOM
+const resize = () => {
+  const W = container.offsetWidth || 360;
+  const H = Math.round(W * 1.68);
+  if (cv.width === W && cv.height === H) return;
+  cv.width = W; cv.height = H;
+  cv.style.width  = W + 'px';
+  cv.style.height = H + 'px';
+};
+resize();
 
-const signY  = CY + G;        const signH = CaH * 0.158;
-const payY   = signY + signH;  const payH  = CaH * 0.122;
-const reelY  = payY  + payH;   const reelH = CaH * 0.268;
-const midY   = reelY + reelH;  const midH  = CaH * 0.108;
-const lowY   = midY  + midH;   const lowH  = CaH * 0.244;
-const trayY  = lowY  + lowH;   const trayH = CaH - (trayY - CY) - G;
+// ── Reel strip (24 stops, blanks dominate for house edge) ──
+const STRIP = [
+  'CHERRY','BLANK','BAR',      'BLANK',
+  'BELL',  'BLANK','TWO_BAR',  'BLANK',
+  'CHERRY','BLANK','BAR',      'BLANK',
+  'BELL',  'BLANK','THREE_BAR','BLANK',
+  'DIAMOND','BLANK','CHERRY',  'BLANK',
+  'SEVEN', 'BLANK','TWO_BAR',  'BLANK'
+];
+const SL = STRIP.length;
 
-const sideW = iW * 0.082;
-const rAreaX = iX + sideW;
-const rAreaW = iW - sideW * 2;
-const rGap   = CW * 0.012;
-const rW     = (rAreaW - rGap * 2) / 3;
+// ── Payouts — only 3-of-a-kind or exactly 2 cherries on reels 0+1 ──
+const PAYS = {
+  'SEVEN|SEVEN|SEVEN':             100,
+  'DIAMOND|DIAMOND|DIAMOND':        50,
+  'THREE_BAR|THREE_BAR|THREE_BAR':  30,
+  'TWO_BAR|TWO_BAR|TWO_BAR':        20,
+  'BAR|BAR|BAR':                    15,
+  'BELL|BELL|BELL':                 12,
+  'CHERRY|CHERRY|CHERRY':           10
+};
 
-const levX    = CX + CaW + CW * 0.015;
-const levPivY = reelY + reelH * 0.22;
-const levLen  = reelH * 1.04;
-const ballR   = CW * 0.046;
-
-// ── Rounded rect helper (no ctx.roundRect — Safari compat) ──
+// ── Rounded-rect helper (no ctx.roundRect — Safari safe) ──
 const rr = (x, y, w, h, r) => {
   r = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -249,29 +232,7 @@ const gold = (x1, y1, x2, y2) => {
   return g;
 };
 
-// ── Symbol strip ──
-const STRIP = [
-  'CHERRY','BLANK','BAR',     'BLANK',
-  'BELL',  'BLANK','TWO_BAR', 'BLANK',
-  'CHERRY','BLANK','BAR',     'BLANK',
-  'BELL',  'BLANK','THREE_BAR','BLANK',
-  'DIAMOND','BLANK','CHERRY', 'BLANK',
-  'SEVEN', 'BLANK','TWO_BAR', 'BLANK'
-];
-const SL = STRIP.length; // 24
-
-// ── Payouts — only 3-of-a-kind or 2 cherries (reel 0+1) ──
-const PAYS = {
-  'SEVEN|SEVEN|SEVEN':            100,
-  'DIAMOND|DIAMOND|DIAMOND':       50,
-  'THREE_BAR|THREE_BAR|THREE_BAR': 30,
-  'TWO_BAR|TWO_BAR|TWO_BAR':       20,
-  'BAR|BAR|BAR':                   15,
-  'BELL|BELL|BELL':                12,
-  'CHERRY|CHERRY|CHERRY':          10,
-};
-
-// ── Draw one symbol centred at (0,0), size=symH ──
+// ── Draw one symbol centred at (0,0) ──
 const drawSym = (sym, sz, alpha) => {
   if (alpha <= 0.02) return;
   ctx.save();
@@ -279,53 +240,53 @@ const drawSym = (sym, sz, alpha) => {
   const h = sz * 0.76;
 
   if (sym === 'CHERRY') {
-    const r = h * 0.20;
+    const r2 = h * 0.20;
     ctx.strokeStyle = '#1a5200'; ctx.lineWidth = h * 0.06; ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(-r, -h * 0.10);
-    ctx.quadraticCurveTo(0, -h * 0.40, r, -h * 0.10);
+    ctx.moveTo(-r2, -h * 0.10);
+    ctx.quadraticCurveTo(0, -h * 0.40, r2, -h * 0.10);
     ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-r, -h * 0.10); ctx.lineTo(-r, h * 0.10 - r); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(r,  -h * 0.10); ctx.lineTo(r,  h * 0.06 - r); ctx.stroke();
-    const g1 = ctx.createRadialGradient(-r * 1.2, -h*0.02, 0, -r, h*0.10, r);
+    ctx.beginPath(); ctx.moveTo(-r2, -h * 0.10); ctx.lineTo(-r2, h * 0.10 - r2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r2, -h * 0.10); ctx.lineTo(r2, h * 0.06 - r2); ctx.stroke();
+    const g1 = ctx.createRadialGradient(-r2 * 1.2, -h*0.02, 0, -r2, h*0.10, r2);
     g1.addColorStop(0, '#ff9999'); g1.addColorStop(0.5, '#dd0000'); g1.addColorStop(1, '#880000');
-    ctx.beginPath(); ctx.arc(-r, h * 0.10, r, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(-r2, h * 0.10, r2, 0, Math.PI * 2);
     ctx.fillStyle = g1; ctx.fill(); ctx.strokeStyle = '#660000'; ctx.lineWidth = 0.8; ctx.stroke();
-    const g2 = ctx.createRadialGradient(r * 0.75, -h*0.04, 0, r, h*0.06, r);
+    const g2 = ctx.createRadialGradient(r2 * 0.75, -h*0.04, 0, r2, h*0.06, r2);
     g2.addColorStop(0, '#ff9999'); g2.addColorStop(0.5, '#ee0000'); g2.addColorStop(1, '#880000');
-    ctx.beginPath(); ctx.arc(r, h * 0.06, r, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(r2, h * 0.06, r2, 0, Math.PI * 2);
     ctx.fillStyle = g2; ctx.fill(); ctx.strokeStyle = '#660000'; ctx.lineWidth = 0.8; ctx.stroke();
-    ctx.beginPath(); ctx.arc(-r - r*0.18, h*0.02, r*0.26, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(-r2 - r2*0.18, h*0.02, r2*0.26, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(255,255,255,0.44)'; ctx.fill();
 
   } else if (sym === 'BAR') {
     const bw = h*0.82, bh = h*0.27;
-    const g = ctx.createLinearGradient(-bw/2, -bh/2, -bw/2, bh/2);
-    g.addColorStop(0,'#999'); g.addColorStop(0.3,'#fff'); g.addColorStop(0.65,'#ccc'); g.addColorStop(1,'#555');
-    rr(-bw/2, -bh/2, bw, bh, bh*0.28); ctx.fillStyle = g; ctx.fill();
+    const g3 = ctx.createLinearGradient(-bw/2, -bh/2, -bw/2, bh/2);
+    g3.addColorStop(0,'#999'); g3.addColorStop(0.3,'#fff'); g3.addColorStop(0.65,'#ccc'); g3.addColorStop(1,'#555');
+    rr(-bw/2, -bh/2, bw, bh, bh*0.28); ctx.fillStyle = g3; ctx.fill();
     ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.fillStyle = '#1a1a1a'; ctx.font = '900 ' + (bh*0.70) + 'px Arial,sans-serif';
+    ctx.fillStyle = '#1a1a1a'; ctx.font = '900 ' + Math.round(bh*0.70) + 'px Arial,sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BAR', 0, 1);
 
   } else if (sym === 'TWO_BAR') {
     const bw = h*0.80, bh = h*0.17, gap = h*0.115;
     [-1, 1].forEach(d => {
-      const g = ctx.createLinearGradient(-bw/2, d*gap-bh/2, -bw/2, d*gap+bh/2);
-      g.addColorStop(0,'#999'); g.addColorStop(0.3,'#fff'); g.addColorStop(0.7,'#bbb'); g.addColorStop(1,'#555');
-      rr(-bw/2, d*gap-bh/2, bw, bh, bh*0.28); ctx.fillStyle = g; ctx.fill();
+      const g4 = ctx.createLinearGradient(-bw/2, d*gap-bh/2, -bw/2, d*gap+bh/2);
+      g4.addColorStop(0,'#999'); g4.addColorStop(0.3,'#fff'); g4.addColorStop(0.7,'#bbb'); g4.addColorStop(1,'#555');
+      rr(-bw/2, d*gap-bh/2, bw, bh, bh*0.28); ctx.fillStyle = g4; ctx.fill();
       ctx.strokeStyle = '#333'; ctx.lineWidth = 0.8; ctx.stroke();
-      ctx.fillStyle = '#111'; ctx.font = '900 ' + (bh*0.70) + 'px Arial,sans-serif';
+      ctx.fillStyle = '#111'; ctx.font = '900 ' + Math.round(bh*0.70) + 'px Arial,sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BAR', 0, d*gap + 0.5);
     });
 
   } else if (sym === 'THREE_BAR') {
     const bw = h*0.78, bh = h*0.13, gap = h*0.10;
     [-1, 0, 1].forEach(d => {
-      const g = ctx.createLinearGradient(-bw/2, d*gap-bh/2, -bw/2, d*gap+bh/2);
-      g.addColorStop(0,'#888'); g.addColorStop(0.3,'#eee'); g.addColorStop(0.7,'#bbb'); g.addColorStop(1,'#444');
-      rr(-bw/2, d*gap-bh/2, bw, bh, bh*0.28); ctx.fillStyle = g; ctx.fill();
+      const g5 = ctx.createLinearGradient(-bw/2, d*gap-bh/2, -bw/2, d*gap+bh/2);
+      g5.addColorStop(0,'#888'); g5.addColorStop(0.3,'#eee'); g5.addColorStop(0.7,'#bbb'); g5.addColorStop(1,'#444');
+      rr(-bw/2, d*gap-bh/2, bw, bh, bh*0.28); ctx.fillStyle = g5; ctx.fill();
       ctx.strokeStyle = '#333'; ctx.lineWidth = 0.6; ctx.stroke();
-      ctx.fillStyle = '#111'; ctx.font = '700 ' + (bh*0.70) + 'px Arial,sans-serif';
+      ctx.fillStyle = '#111'; ctx.font = '700 ' + Math.round(bh*0.70) + 'px Arial,sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BAR', 0, d*gap + 0.5);
     });
 
@@ -334,7 +295,7 @@ const drawSym = (sym, sz, alpha) => {
     ctx.beginPath();
     ctx.moveTo(-br*0.66, br*0.30);
     ctx.bezierCurveTo(-br*0.66, -br*0.36, -br*0.18, -br*0.90, 0, -br*0.90);
-    ctx.bezierCurveTo(br*0.18,  -br*0.90,  br*0.66,  -br*0.36, br*0.66, br*0.30);
+    ctx.bezierCurveTo(br*0.18, -br*0.90, br*0.66, -br*0.36, br*0.66, br*0.30);
     ctx.closePath();
     const bg = ctx.createLinearGradient(-br, -br, br, br*0.5);
     bg.addColorStop(0,'#ffe066'); bg.addColorStop(0.4,'#ffd700'); bg.addColorStop(1,'#a06800');
@@ -350,27 +311,26 @@ const drawSym = (sym, sz, alpha) => {
     const dr = h * 0.35;
     const pts = [[0,-dr],[dr*0.62,-dr*0.08],[dr*0.52,dr*0.50],[0,dr],[-dr*0.52,dr*0.50],[-dr*0.62,-dr*0.08]];
     ctx.beginPath();
-    pts.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+    pts.forEach(([x2, y2], i) => i === 0 ? ctx.moveTo(x2, y2) : ctx.lineTo(x2, y2));
     ctx.closePath();
     const dg = ctx.createLinearGradient(-dr, -dr, dr, dr);
     dg.addColorStop(0,'#e8f8ff'); dg.addColorStop(0.25,'#bbddff'); dg.addColorStop(0.55,'#4499ee'); dg.addColorStop(1,'#0044bb');
     ctx.fillStyle = dg; ctx.fill(); ctx.strokeStyle = '#0033aa'; ctx.lineWidth = 1.2; ctx.stroke();
     ctx.strokeStyle = 'rgba(255,255,255,0.48)'; ctx.lineWidth = 0.8;
-    [[pts[0],pts[2]],[pts[0],pts[3]],[pts[0],pts[4]],[pts[5],pts[2]]].forEach(([a,b]) => {
+    [[pts[0],pts[2]],[pts[0],pts[3]],[pts[0],pts[4]],[pts[5],pts[2]]].forEach(([a, b]) => {
       ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
     });
     ctx.beginPath(); ctx.ellipse(-dr*0.10, -dr*0.30, dr*0.20, dr*0.11, -0.4, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(255,255,255,0.60)'; ctx.fill();
 
   } else if (sym === 'SEVEN') {
-    ctx.font = '900 ' + (h*0.76) + 'px Arial,sans-serif';
+    ctx.font = '900 ' + Math.round(h*0.76) + 'px Arial,sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#440000'; ctx.lineWidth = h*0.10; ctx.strokeText('7', 0, h*0.04);
     const tg = ctx.createLinearGradient(0, -h*0.36, 0, h*0.36);
     tg.addColorStop(0,'#ffaaaa'); tg.addColorStop(0.4,'#ff2200'); tg.addColorStop(1,'#880000');
     ctx.fillStyle = tg; ctx.fillText('7', 0, h*0.04);
   }
-  // BLANK: draw nothing
   ctx.restore();
 };
 
@@ -387,7 +347,7 @@ let coinInserted = false;
 let spinning     = false;
 let leverY       = 0;
 let leverDragging = false;
-let leverDragStartScreenY = 0;
+let leverDragStartY = 0;
 let leverDragStartVal = 0;
 let leverVel     = 0;
 let resultMsg    = '';
@@ -400,20 +360,12 @@ let rafId        = null;
 const drawReel = (idx, rx, ry, rw, rh) => {
   const R = reels[idx];
   const symH = rh / 3;
-
-  // Ivory drum background
   rr(rx, ry, rw, rh, 4);
   const ibg = ctx.createLinearGradient(rx, ry, rx+rw, ry);
   ibg.addColorStop(0,'#ddd8c0'); ibg.addColorStop(0.5,'#f5f0e2'); ibg.addColorStop(1,'#d8d2ba');
   ctx.fillStyle = ibg; ctx.fill();
-
-  // Clip to drum window
-  ctx.save();
-  rr(rx, ry, rw, rh, 4); ctx.clip();
-
-  const base = Math.floor(R.offset);
-  const frac = R.offset - base;
-
+  ctx.save(); rr(rx, ry, rw, rh, 4); ctx.clip();
+  const base = Math.floor(R.offset), frac = R.offset - base;
   for (let row = -1; row <= 3; row++) {
     const si  = ((base + row) % SL + SL) % SL;
     const sym = STRIP[si];
@@ -422,14 +374,9 @@ const drawReel = (idx, rx, ry, rw, rh) => {
     const norm  = (rawCY - (ry + rh * 0.5)) / (rh * 0.5);
     const scale = Math.max(0.22, Math.cos(norm * Math.PI * 0.43));
     const alpha = Math.max(0, 1 - Math.abs(norm) * 1.20);
-
-    ctx.save();
-    ctx.translate(rx + rw * 0.5, rawCY);
-    ctx.scale(1, scale);
+    ctx.save(); ctx.translate(rx + rw * 0.5, rawCY); ctx.scale(1, scale);
     drawSym(sym, symH, alpha);
     ctx.restore();
-
-    // Row separator line
     const lineY = ry + (row - frac + 1) * symH;
     if (lineY > ry + 1 && lineY < ry + rh - 1) {
       ctx.strokeStyle = 'rgba(170,155,120,0.25)'; ctx.lineWidth = 0.7;
@@ -437,49 +384,61 @@ const drawReel = (idx, rx, ry, rw, rh) => {
     }
   }
   ctx.restore();
-
-  // Top shadow
-  const ts = ctx.createLinearGradient(rx, ry, rx, ry + rh*0.22);
+  const ts = ctx.createLinearGradient(rx, ry, rx, ry+rh*0.22);
   ts.addColorStop(0,'rgba(0,0,0,0.52)'); ts.addColorStop(1,'rgba(0,0,0,0)');
   rr(rx, ry, rw, rh*0.22, 4); ctx.fillStyle = ts; ctx.fill();
-  // Bottom shadow
   const bs = ctx.createLinearGradient(rx, ry+rh*0.78, rx, ry+rh);
   bs.addColorStop(0,'rgba(0,0,0,0)'); bs.addColorStop(1,'rgba(0,0,0,0.52)');
   rr(rx, ry+rh*0.78, rw, rh*0.22, 4); ctx.fillStyle = bs; ctx.fill();
-
-  // Gold reel frame
   rr(rx-2.5, ry-2.5, rw+5, rh+5, 6);
-  ctx.strokeStyle = gold(rx-2.5,ry-2.5,rx+rw+2.5,ry+rh+2.5);
-  ctx.lineWidth = 3.5; ctx.stroke();
+  ctx.strokeStyle = gold(rx-2.5,ry-2.5,rx+rw+2.5,ry+rh+2.5); ctx.lineWidth = 3.5; ctx.stroke();
 };
 
 // ── Main draw ──
 const draw = () => {
-  ctx.clearRect(0, 0, CW, CH);
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
   const t = flashT;
 
-  // Cabinet body
-  rr(CX, CY, CaW, CaH, CW*0.028);
-  ctx.fillStyle = '#100a00'; ctx.fill();
-  rr(CX, CY, CaW, CaH, CW*0.028);
+  // Layout constants computed from actual canvas size
+  const G    = W * 0.050;
+  const CX   = W * 0.038, CY = H * 0.010;
+  const CaW  = W * 0.920, CaH = H * 0.970;
+  const iX   = CX + G,   iW  = CaW - G * 2;
+  const signY = CY + G,   signH = CaH * 0.158;
+  const payY  = signY + signH, payH = CaH * 0.122;
+  const reelY = payY + payH,   reelH = CaH * 0.268;
+  const midY  = reelY + reelH, midH  = CaH * 0.108;
+  const lowY  = midY + midH,   lowH  = CaH * 0.244;
+  const trayY = lowY + lowH,   trayH = CaH - (trayY - CY) - G;
+  const sideW = iW * 0.082;
+  const rAreaX = iX + sideW, rAreaW = iW - sideW * 2;
+  const rGap = W * 0.012, rW = (rAreaW - rGap * 2) / 3;
+  const levX = CX + CaW + W * 0.015;
+  const levPivY = reelY + reelH * 0.22;
+  const levLen = reelH * 1.04, ballR = W * 0.046;
+  const lpMax = levLen * 0.84;
+  const curBY = levPivY + leverY * lpMax;
+
+  // Cabinet
+  rr(CX, CY, CaW, CaH, W*0.028); ctx.fillStyle = '#100a00'; ctx.fill();
+  rr(CX, CY, CaW, CaH, W*0.028);
   ctx.strokeStyle = gold(CX,CY,CX+CaW,CY+CaH); ctx.lineWidth = G*2; ctx.stroke();
-  // Inner accent
-  rr(CX+G*0.55, CY+G*0.55, CaW-G*1.1, CaH-G*1.1, CW*0.022);
+  rr(CX+G*0.55, CY+G*0.55, CaW-G*1.1, CaH-G*1.1, W*0.022);
   ctx.strokeStyle = 'rgba(255,210,60,0.30)'; ctx.lineWidth = 1; ctx.stroke();
 
-  // ── TOP SIGN ──
-  const sx = iX+1, sy = signY, sw = iW-2, sh = signH-3;
-  rr(sx, sy, sw, sh, CW*0.016);
+  // Top sign
+  const sx = iX+1, sy = signY, sw2 = iW-2, sh = signH-3;
+  rr(sx,sy,sw2,sh,W*0.016);
   const sgbg = ctx.createLinearGradient(sx,sy,sx,sy+sh);
   sgbg.addColorStop(0,'#06061a'); sgbg.addColorStop(0.5,'#0c0c28'); sgbg.addColorStop(1,'#06061a');
   ctx.fillStyle = sgbg; ctx.fill();
-  rr(sx, sy, sw, sh, CW*0.016);
-  ctx.strokeStyle = gold(sx,sy,sx+sw,sy+sh); ctx.lineWidth = 2.2; ctx.stroke();
+  rr(sx,sy,sw2,sh,W*0.016); ctx.strokeStyle = gold(sx,sy,sx+sw2,sy+sh); ctx.lineWidth = 2.2; ctx.stroke();
 
-  // Dot border row top+bottom of sign
+  // Dot border
   [sy+sh*0.10, sy+sh*0.90].forEach(dotY => {
     for (let i = 0; i < 22; i++) {
-      const bx = sx + sw*0.06 + i*(sw*0.88/21);
+      const bx = sx + sw2*0.06 + i*(sw2*0.88/21);
       const on = (Math.floor(t*5+i*1.3)%3 !== 2) || winAmount > 0;
       ctx.beginPath(); ctx.arc(bx, dotY, 2.2, 0, Math.PI*2);
       ctx.fillStyle = on ? '#ffd700' : '#443300'; ctx.fill();
@@ -488,7 +447,7 @@ const draw = () => {
   });
 
   // Art-Deco fans
-  [[sx+sw*0.08,sy+sh*0.54,1],[sx+sw*0.92,sy+sh*0.54,-1]].forEach(([fx,fy,d]) => {
+  [[sx+sw2*0.08,sy+sh*0.54,1],[sx+sw2*0.92,sy+sh*0.54,-1]].forEach(([fx,fy,d]) => {
     ctx.save(); ctx.translate(fx,fy); ctx.scale(d,1);
     const fr = sh*0.36;
     for (let a = -Math.PI*0.40; a <= Math.PI*0.40; a += Math.PI/6) {
@@ -499,39 +458,32 @@ const draw = () => {
   });
 
   // BAR side text
-  [[sx+sw*0.02,'left'],[sx+sw*0.98,'right']].forEach(([bx,al]) => {
-    ctx.textAlign = al; ctx.font = '700 '+(sh*0.088)+'px Arial,sans-serif'; ctx.fillStyle='#cc9900';
-    ['BAR','BAR','BAR'].forEach((t2,i) => ctx.fillText(t2, bx, sy+sh*0.35+i*sh*0.20));
+  [[sx+sw2*0.02,'left'],[sx+sw2*0.98,'right']].forEach(([bx2,al]) => {
+    ctx.textAlign = al; ctx.font = '700 '+Math.round(sh*0.088)+'px Arial,sans-serif'; ctx.fillStyle='#cc9900';
+    ['BAR','BAR','BAR'].forEach((txt,i) => ctx.fillText(txt, bx2, sy+sh*0.35+i*sh*0.20));
   });
 
-  // Diamond above CRAZY
-  ctx.save(); ctx.translate(sx+sw*0.5, sy+sh*0.24); drawSym('DIAMOND', sh*0.36, 1); ctx.restore();
-
-  // CRAZY
+  // Diamond + CRAZY DIAMONDS text on sign
+  ctx.save(); ctx.translate(sx+sw2*0.5, sy+sh*0.24); drawSym('DIAMOND', sh*0.36, 1); ctx.restore();
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.font = '900 '+(sh*0.21)+'px Arial,sans-serif';
-  ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.04; ctx.strokeText('CRAZY', sx+sw*0.5, sy+sh*0.52);
+  ctx.font = '900 '+Math.round(sh*0.21)+'px Arial,sans-serif';
+  ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.04; ctx.strokeText('CRAZY', sx+sw2*0.5, sy+sh*0.52);
   const g1 = ctx.createLinearGradient(sx,sy+sh*0.43,sx,sy+sh*0.61);
   g1.addColorStop(0,'#fff0a0'); g1.addColorStop(1,'#c89000'); ctx.fillStyle=g1;
-  ctx.fillText('CRAZY', sx+sw*0.5, sy+sh*0.52);
-
-  // DIAMONDS
-  ctx.font = '900 '+(sh*0.28)+'px Arial,sans-serif';
-  ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.05; ctx.strokeText('DIAMONDS', sx+sw*0.5, sy+sh*0.79);
+  ctx.fillText('CRAZY', sx+sw2*0.5, sy+sh*0.52);
+  ctx.font = '900 '+Math.round(sh*0.28)+'px Arial,sans-serif';
+  ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.05; ctx.strokeText('DIAMONDS', sx+sw2*0.5, sy+sh*0.79);
   const g2 = ctx.createLinearGradient(sx,sy+sh*0.66,sx,sy+sh*0.90);
   g2.addColorStop(0,'#fff0a0'); g2.addColorStop(1,'#c89000'); ctx.fillStyle=g2;
-  ctx.fillText('DIAMONDS', sx+sw*0.5, sy+sh*0.79);
+  ctx.fillText('DIAMONDS', sx+sw2*0.5, sy+sh*0.79);
 
-  // ── PAY TABLE PANEL ──
+  // Pay table panel
   const px = iX+1, py = payY, pw = iW-2, ph = payH-2;
-  rr(px, py, pw, ph, 3);
-  ctx.fillStyle = '#f0ead8'; ctx.fill();
-  rr(px, py, pw, ph, 3); ctx.strokeStyle=gold(px,py,px+pw,py+ph); ctx.lineWidth=2; ctx.stroke();
-
+  rr(px,py,pw,ph,3); ctx.fillStyle='#f0ead8'; ctx.fill();
+  rr(px,py,pw,ph,3); ctx.strokeStyle=gold(px,py,px+pw,py+ph); ctx.lineWidth=2; ctx.stroke();
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.font = '900 '+(ph*0.23)+'px Arial,sans-serif';
-  ctx.fillStyle='#000080'; ctx.fillText('WINS', px+pw*0.5, py+ph*0.17);
-
+  ctx.font='900 '+Math.round(ph*0.23)+'px Arial,sans-serif'; ctx.fillStyle='#000080';
+  ctx.fillText('WINS', px+pw*0.5, py+ph*0.17);
   const entries=[['Diam x3','x50'],['3xBAR','x30'],['2xBAR','x20'],['BAR x3','x15'],['Bell x3','x12'],['Cherry x3','x10']];
   const mw=pw*0.27, mh=ph*0.31;
   entries.forEach(([k,v],i) => {
@@ -540,85 +492,80 @@ const draw = () => {
     const ebg=ctx.createLinearGradient(ex,ey,ex,ey+mh);
     ebg.addColorStop(0,'#fff8e8'); ebg.addColorStop(1,'#e8dfc0');
     ctx.fillStyle=ebg; ctx.fill(); ctx.strokeStyle='#aaa'; ctx.lineWidth=0.7; ctx.stroke();
-    ctx.textAlign='left'; ctx.font='600 '+(mh*0.34)+'px Arial,sans-serif'; ctx.fillStyle='#222';
+    ctx.textAlign='left'; ctx.font='600 '+Math.round(mh*0.34)+'px Arial,sans-serif'; ctx.fillStyle='#222';
     ctx.fillText(k, ex+2, ey+mh*0.40);
-    ctx.textAlign='right'; ctx.font='900 '+(mh*0.37)+'px Arial,sans-serif'; ctx.fillStyle='#880000';
+    ctx.textAlign='right'; ctx.font='900 '+Math.round(mh*0.37)+'px Arial,sans-serif'; ctx.fillStyle='#880000';
     ctx.fillText(v, ex+mw-2, ey+mh*0.62);
   });
 
-  // ── SIDE PAYLINE STRIPS ──
-  [[iX, iX+sideW-1],[iX+iW-sideW+1, iX+iW-1]].forEach(([lx, rx2]) => {
-    const sw2=rx2-lx;
-    rr(lx, reelY, sw2, reelH, 3);
-    const sbg=ctx.createLinearGradient(lx,reelY,lx,reelY+reelH);
+  // Side PAYLINE strips
+  [[iX, iX+sideW-1],[iX+iW-sideW+1, iX+iW-1]].forEach(([lx2, rx2]) => {
+    const sw3=rx2-lx2;
+    rr(lx2,reelY,sw3,reelH,3);
+    const sbg=ctx.createLinearGradient(lx2,reelY,lx2,reelY+reelH);
     sbg.addColorStop(0,'#1a0d00'); sbg.addColorStop(1,'#0d0800');
     ctx.fillStyle=sbg; ctx.fill();
-    rr(lx, reelY, sw2, reelH, 3); ctx.strokeStyle=gold(lx,reelY,rx2,reelY+reelH); ctx.lineWidth=2; ctx.stroke();
-    ctx.save(); ctx.translate(lx+sw2*0.5, reelY+reelH*0.5); ctx.rotate(-Math.PI/2);
+    rr(lx2,reelY,sw3,reelH,3); ctx.strokeStyle=gold(lx2,reelY,rx2,reelY+reelH); ctx.lineWidth=2; ctx.stroke();
+    ctx.save(); ctx.translate(lx2+sw3*0.5, reelY+reelH*0.5); ctx.rotate(-Math.PI/2);
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.font='900 '+(sw2*0.35)+'px Arial,sans-serif';
+    ctx.font='900 '+Math.round(sw3*0.35)+'px Arial,sans-serif';
     ctx.fillStyle='#ffd700'; ctx.strokeStyle='#000'; ctx.lineWidth=1;
     ctx.strokeText('PAYLINE',0,0); ctx.fillText('PAYLINE',0,0);
     ctx.restore();
   });
 
-  // ── REEL WINDOW ──
-  const rfx=rAreaX-5, rfy=reelY-5, rfw=rAreaW+10, rfh=reelH+10;
-  rr(rfx, rfy, rfw, rfh, 7); ctx.fillStyle='#1a1a1a'; ctx.fill();
-  rr(rfx, rfy, rfw, rfh, 7); ctx.strokeStyle=gold(rfx,rfy,rfx+rfw,rfy+rfh); ctx.lineWidth=5; ctx.stroke();
+  // Reel window
+  rr(rAreaX-5,reelY-5,rAreaW+10,reelH+10,7); ctx.fillStyle='#1a1a1a'; ctx.fill();
+  rr(rAreaX-5,reelY-5,rAreaW+10,reelH+10,7);
+  ctx.strokeStyle=gold(rAreaX-5,reelY-5,rAreaX+rAreaW+5,reelY+reelH+5); ctx.lineWidth=5; ctx.stroke();
 
-  // ── REELS ──
-  for (let i = 0; i < 3; i++) {
-    drawReel(i, rAreaX+i*(rW+rGap), reelY, rW, reelH);
-  }
+  // Reels
+  for (let i=0; i<3; i++) drawReel(i, rAreaX+i*(rW+rGap), reelY, rW, reelH);
 
   // Payline
   const plY = reelY + reelH * 0.5;
-  const plash = winAmount > 0 && Math.sin(t*7) > 0;
-  ctx.strokeStyle = plash ? '#ff3300' : 'rgba(255,50,0,0.55)';
+  ctx.strokeStyle = (winAmount>0 && Math.sin(t*7)>0) ? '#ff3300' : 'rgba(255,50,0,0.55)';
   ctx.lineWidth=2; ctx.setLineDash([5,5]);
   ctx.beginPath(); ctx.moveTo(iX+1,plY); ctx.lineTo(iX+iW-1,plY); ctx.stroke();
   ctx.setLineDash([]);
 
-  // ── MID PANEL ──
+  // Mid panel
   const mpx=iX+1, mpy=midY, mpw=iW-2, mph=midH-2;
-  rr(mpx, mpy, mpw, mph, 4);
+  rr(mpx,mpy,mpw,mph,4);
   const mpbg=ctx.createLinearGradient(mpx,mpy,mpx,mpy+mph);
   mpbg.addColorStop(0,'#0d0800'); mpbg.addColorStop(1,'#060400');
   ctx.fillStyle=mpbg; ctx.fill();
-  rr(mpx, mpy, mpw, mph, 4); ctx.strokeStyle=gold(mpx,mpy,mpx+mpw,mpy+mph); ctx.lineWidth=1.8; ctx.stroke();
-
-  // Credits LED
-  ctx.font = (mph*0.20)+'px monospace';
+  rr(mpx,mpy,mpw,mph,4); ctx.strokeStyle=gold(mpx,mpy,mpx+mpw,mpy+mph); ctx.lineWidth=1.8; ctx.stroke();
+  ctx.font=Math.round(mph*0.20)+'px monospace';
   ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(255,100,0,0.28)';
   ctx.fillText('CREDITS', mpx+8, mpy+mph*0.28);
-  ctx.font = '900 '+(mph*0.44)+'px monospace';
+  ctx.font='900 '+Math.round(mph*0.44)+'px monospace';
   ctx.fillStyle='#ff6600'; ctx.shadowColor='#ff4400'; ctx.shadowBlur=7;
   ctx.fillText(Math.round(credits).toLocaleString(), mpx+8, mpy+mph*0.76);
   ctx.shadowBlur=0;
 
-  // INSERT COIN button (right half of mid panel)
+  // Insert coin button
   const cbx=mpx+mpw*0.54, cby=mpy+mph*0.10, cbw=mpw*0.43, cbh=mph*0.80;
-  rr(cbx, cby, cbw, cbh, cbh*0.38);
+  rr(cbx,cby,cbw,cbh,cbh*0.38);
   const cbg2=ctx.createLinearGradient(cbx,cby,cbx,cby+cbh);
   if (coinInserted) { cbg2.addColorStop(0,'#553300'); cbg2.addColorStop(1,'#332200'); }
   else              { cbg2.addColorStop(0,'#d48000'); cbg2.addColorStop(0.5,'#ffaa00'); cbg2.addColorStop(1,'#996000'); }
   ctx.fillStyle=cbg2; ctx.fill(); ctx.strokeStyle='#442200'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(cbx+cbw*0.5, cby+cbh*0.27, cbw*0.32, cbh*0.13, 0, 0, Math.PI*2);
+  ctx.beginPath(); ctx.ellipse(cbx+cbw*0.5,cby+cbh*0.27,cbw*0.32,cbh*0.13,0,0,Math.PI*2);
   ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.fill();
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.font='900 '+(cbh*0.21)+'px Arial,sans-serif';
+  ctx.font='900 '+Math.round(cbh*0.21)+'px Arial,sans-serif';
   ctx.fillStyle=coinInserted?'#886600':'#111';
   ctx.fillText('INSERT', cbx+cbw*0.5, cby+cbh*0.35);
   ctx.fillText('COIN', cbx+cbw*0.5, cby+cbh*0.60);
-  ctx.font='700 '+(cbh*0.18)+'px Arial,sans-serif';
+  ctx.font='700 '+Math.round(cbh*0.18)+'px Arial,sans-serif';
   ctx.fillText('('+BET+')', cbx+cbw*0.5, cby+cbh*0.83);
 
-  // Result msg
+  // Result
   if (resultMsg) {
     const vis = winAmount>0 ? (Math.sin(t*5.5)>0.05) : true;
     if (vis) {
-      ctx.font='900 '+(mph*0.27)+'px Arial,sans-serif';
+      ctx.font='900 '+Math.round(mph*0.27)+'px Arial,sans-serif';
       ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.strokeStyle='#000'; ctx.lineWidth=2.5;
       ctx.strokeText(resultMsg, mpx+mpw*0.27, mpy+mph*0.52);
@@ -626,65 +573,59 @@ const draw = () => {
     }
   }
 
-  // ── LOWER BODY ──
+  // Lower body
   const lx=iX+1, ly=lowY, lw=iW-2, lh=lowH-2;
-  rr(lx, ly, lw, lh, 4);
-  const lbg=ctx.createLinearGradient(lx,ly,lx,ly+lh);
-  lbg.addColorStop(0,'#0d0800'); lbg.addColorStop(1,'#080500');
-  ctx.fillStyle=lbg; ctx.fill();
-  rr(lx, ly, lw, lh, 4); ctx.strokeStyle=gold(lx,ly,lx+lw,ly+lh); ctx.lineWidth=1.8; ctx.stroke();
-
-  // Diamond + branding
+  rr(lx,ly,lw,lh,4);
+  const lbg2=ctx.createLinearGradient(lx,ly,lx,ly+lh);
+  lbg2.addColorStop(0,'#0d0800'); lbg2.addColorStop(1,'#080500');
+  ctx.fillStyle=lbg2; ctx.fill();
+  rr(lx,ly,lw,lh,4); ctx.strokeStyle=gold(lx,ly,lx+lw,ly+lh); ctx.lineWidth=1.8; ctx.stroke();
   ctx.save(); ctx.translate(lx+lw*0.5, ly+lh*0.34); drawSym('DIAMOND', lh*0.42, 0.70); ctx.restore();
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.font='900 '+(lh*0.14)+'px Arial,sans-serif';
+  ctx.font='900 '+Math.round(lh*0.14)+'px Arial,sans-serif';
   ctx.strokeStyle='#000'; ctx.lineWidth=2.5; ctx.strokeText('CRAZY DIAMONDS', lx+lw*0.5, ly+lh*0.72);
   const ld=ctx.createLinearGradient(lx,ly+lh*0.65,lx,ly+lh*0.80);
   ld.addColorStop(0,'#fff0a0'); ld.addColorStop(1,'#c89000'); ctx.fillStyle=ld;
   ctx.fillText('CRAZY DIAMONDS', lx+lw*0.5, ly+lh*0.72);
-  // Grooves
   for (let i=1; i<=5; i++) {
     ctx.strokeStyle='rgba(255,200,50,0.15)'; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(lx+6,ly+lh*0.83+i*lh*0.026); ctx.lineTo(lx+lw-6,ly+lh*0.83+i*lh*0.026); ctx.stroke();
   }
 
-  // ── COIN TRAY ──
-  const tx=lx+lw*0.15, ty=trayY+2, tw=lw*0.70, th=trayH-3;
-  rr(tx, ty, tw, th, th*0.42);
-  const tg2=ctx.createLinearGradient(tx,ty,tx,ty+th);
+  // Coin tray
+  const tx=lx+lw*0.15, ty2=trayY+2, tw=lw*0.70, th=trayH-3;
+  rr(tx,ty2,tw,th,th*0.42);
+  const tg2=ctx.createLinearGradient(tx,ty2,tx,ty2+th);
   tg2.addColorStop(0,'#444'); tg2.addColorStop(0.5,'#777'); tg2.addColorStop(1,'#333');
-  ctx.fillStyle=tg2; ctx.fill(); ctx.strokeStyle=gold(tx,ty,tx+tw,ty+th); ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle=tg2; ctx.fill(); ctx.strokeStyle=gold(tx,ty2,tx+tw,ty2+th); ctx.lineWidth=2; ctx.stroke();
 
-  // ── LEVER ──
-  const lpMax = levLen * 0.84;
-  const curBY = levPivY + leverY * lpMax;
-  // Track
+  // Lever track
   ctx.strokeStyle='#555'; ctx.lineWidth=2.5;
   ctx.beginPath(); ctx.moveTo(levX,levPivY-8); ctx.lineTo(levX,levPivY+lpMax+8); ctx.stroke();
-  // Horizontal arm
+  // Arm
   const armBaseX=CX+CaW-G*0.4, armY=levPivY+ballR*0.22;
-  rr(armBaseX, armY-5, levX-armBaseX+5, 10, 5);
+  rr(armBaseX,armY-5,levX-armBaseX+5,10,5);
   const armG=ctx.createLinearGradient(armBaseX,armY-5,levX,armY-5);
   armG.addColorStop(0,'#555'); armG.addColorStop(0.4,'#eee'); armG.addColorStop(0.8,'#bbb'); armG.addColorStop(1,'#666');
   ctx.fillStyle=armG; ctx.fill(); ctx.strokeStyle='#444'; ctx.lineWidth=1; ctx.stroke();
   // Pivot
-  ctx.beginPath(); ctx.arc(levX, armY, 10, 0, Math.PI*2);
+  ctx.beginPath(); ctx.arc(levX,armY,10,0,Math.PI*2);
   const pKg=ctx.createRadialGradient(levX-3,armY-3,0,levX,armY,10);
   pKg.addColorStop(0,'#eee'); pKg.addColorStop(1,'#777');
   ctx.fillStyle=pKg; ctx.fill(); ctx.strokeStyle='#444'; ctx.lineWidth=1.5; ctx.stroke();
   // Rod
-  rr(levX-4.5, levPivY, 9, lpMax+ballR*0.5, 4.5);
+  rr(levX-4.5,levPivY,9,lpMax+ballR*0.5,4.5);
   const rodG=ctx.createLinearGradient(levX-5,0,levX+5,0);
   rodG.addColorStop(0,'#555'); rodG.addColorStop(0.35,'#eee'); rodG.addColorStop(0.65,'#ccc'); rodG.addColorStop(1,'#555');
   ctx.fillStyle=rodG; ctx.fill();
-  rr(levX-1.5, levPivY, 3, lpMax+ballR*0.5, 2);
+  rr(levX-1.5,levPivY,3,lpMax+ballR*0.5,2);
   ctx.fillStyle='rgba(255,255,255,0.36)'; ctx.fill();
   // Ball
   const ballG=ctx.createRadialGradient(levX-ballR*0.28,curBY-ballR*0.32,0,levX,curBY,ballR);
   ballG.addColorStop(0,'#ff9999'); ballG.addColorStop(0.48,'#cc0000'); ballG.addColorStop(1,'#4d0000');
-  ctx.beginPath(); ctx.arc(levX, curBY, ballR, 0, Math.PI*2);
+  ctx.beginPath(); ctx.arc(levX,curBY,ballR,0,Math.PI*2);
   ctx.fillStyle=ballG; ctx.fill(); ctx.strokeStyle='#2a0000'; ctx.lineWidth=2; ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(levX-ballR*0.26, curBY-ballR*0.30, ballR*0.27, ballR*0.17, -0.6, 0, Math.PI*2);
+  ctx.beginPath(); ctx.ellipse(levX-ballR*0.26,curBY-ballR*0.30,ballR*0.27,ballR*0.17,-0.6,0,Math.PI*2);
   ctx.fillStyle='rgba(255,255,255,0.42)'; ctx.fill();
 };
 
@@ -696,23 +637,17 @@ const evalResult = () => {
   const key = s.join('|');
   let mult = 0;
   if (PAYS[key]) { mult = PAYS[key]; }
-  else if (s[0]==='CHERRY' && s[1]==='CHERRY') { mult = 4; } // exactly 2 cherries pays
-
+  else if (s[0]==='CHERRY' && s[1]==='CHERRY') { mult = 4; }
   if (mult > 0) {
     const prize = BET * mult;
-    winAmount = prize;
-    credits  += prize;
-    _addCoins(prize);
-    updateWallet(0, null);
+    winAmount = prize; credits += prize;
+    _addCoins(prize); updateWallet(0, null);
     resultMsg = '+' + prize;
     resultCol = mult>=50?'#ff44ff':mult>=20?'#00ffcc':'#ffd700';
-    haptic('success');
-    spawnCoins(prize);
+    haptic('success'); spawnCoins(prize);
   } else {
-    winAmount = 0;
-    resultMsg = 'No Win';
-    resultCol = 'rgba(255,180,80,0.50)';
-    haptic('light');
+    winAmount = 0; resultMsg = 'No Win';
+    resultCol = 'rgba(255,180,80,0.50)'; haptic('light');
   }
 };
 
@@ -720,31 +655,24 @@ const evalResult = () => {
 const spawnCoins = prize => {
   const count = Math.min(55, Math.max(6, Math.floor(prize / BET * 6)));
   const rect  = cv.getBoundingClientRect();
-  const wRect = wrap.getBoundingClientRect();
-  const scX   = rect.width  / CW;
-  const scY   = rect.height / CH;
-  const trayCX = (iX + iW*0.50) * scX + (rect.left - wRect.left);
-  const trayCY =  trayY          * scY + (rect.top  - wRect.top);
-
-  coinLayer.style.pointerEvents = 'all';
+  const trayCX = rect.left + rect.width * 0.5;
+  const trayCY = rect.top  + rect.height * 0.92;
   for (let i = 0; i < count; i++) {
     setTimeout(() => {
       const coin = document.createElement('div');
-      const sz   = 14 + Math.random() * 10;
-      const sx2  = trayCX + (Math.random()-0.5)*60;
-      coin.style.cssText = 'position:absolute;left:'+sx2+'px;top:'+trayCY+'px;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#ffe066,#cc8800,#7a4a00);border:1.5px solid #aa7700;box-shadow:0 0 5px rgba(255,200,0,0.6);pointer-events:all;cursor:pointer;z-index:20;';
+      const sz = 14 + Math.random() * 10;
+      const sx2 = trayCX + (Math.random()-0.5)*60;
+      coin.style.cssText = 'position:fixed;left:'+sx2+'px;top:'+trayCY+'px;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#ffe066,#cc8800,#7a4a00);border:1.5px solid #aa7700;box-shadow:0 0 5px rgba(255,200,0,0.6);pointer-events:all;cursor:pointer;z-index:9999;';
       coinLayer.appendChild(coin);
-      let vx=( Math.random()-0.5)*11, vy=-(9+Math.random()*13);
-      let cx2=sx2, cy2=trayCY, life=0, collected=false;
+      let vx=(Math.random()-0.5)*11, vy=-(9+Math.random()*13), cx2=sx2, cy2=trayCY, life=0, collected=false;
       coin.addEventListener('pointerdown', e => {
-        e.stopPropagation();
-        if (collected) return; collected=true;
-        credits += Math.ceil(BET*0.1); _addCoins(Math.ceil(BET*0.1)); updateWallet(0,null); haptic('light');
+        e.stopPropagation(); if (collected) return; collected=true;
+        credits+=Math.ceil(BET*0.1); _addCoins(Math.ceil(BET*0.1)); updateWallet(0,null); haptic('light');
         coin.style.opacity='0'; coin.style.transform='scale(1.6)'; coin.style.transition='all .25s';
         setTimeout(()=>coin.remove(),270);
       });
       const anim = () => {
-        if (collected || !coinLayer.contains(coin)) return;
+        if (collected||!coinLayer.contains(coin)) return;
         life++; vy+=0.55; cy2+=vy; cx2+=vx; vx*=0.97;
         coin.style.left=cx2+'px'; coin.style.top=cy2+'px';
         if (life>110) coin.style.opacity=Math.max(0,1-(life-110)/50)+'';
@@ -754,7 +682,6 @@ const spawnCoins = prize => {
       requestAnimationFrame(anim);
     }, i*52+Math.random()*68);
   }
-  setTimeout(()=>{ if(!coinLayer.children.length) coinLayer.style.pointerEvents='none'; }, count*120+2200);
 };
 
 // ── Animation loop ──
@@ -771,7 +698,7 @@ const animLoop = ts => {
       } else {
         const dist = ((r.targetOffset - r.offset) % SL + SL) % SL;
         if (dist < 0.06) { r.offset=r.targetOffset%SL; r.stopped=true; r.speed=0; haptic('light'); }
-        else { r.offset = (r.offset + Math.max(0.28, Math.min(r.speed, dist*5+0.4))/60) % SL; }
+        else { r.offset=(r.offset+Math.max(0.28,Math.min(r.speed,dist*5+0.4))/60)%SL; }
       }
     });
     if (allDone) { spinning=false; evalResult(); }
@@ -781,26 +708,35 @@ const animLoop = ts => {
     leverY = Math.max(0, leverY + leverVel*0.09);
     if (leverY<0.008 && Math.abs(leverVel)<0.01) { leverY=0; leverVel=0; }
   }
-  try { draw(); } catch(e) { console.error('SLOT DRAW ERROR:', e.message, e.stack); }
+  resize();
+  draw();
   rafId = requestAnimationFrame(animLoop);
 };
-// Triple rAF: guarantees layout done, panel painted, then loop starts
-requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => {
-  rafId = requestAnimationFrame(animLoop);
-})));
+requestAnimationFrame(() => requestAnimationFrame(() => { rafId = requestAnimationFrame(animLoop); }));
 
-// -- Input helpers --
+// ── Input ──
 const getPos = e => {
   const rect = cv.getBoundingClientRect();
   const src  = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
-  return { x:(src.clientX-rect.left)*(CW/rect.width), y:(src.clientY-rect.top)*(CH/rect.height), sY:src.clientY };
+  return { x:(src.clientX-rect.left)*(cv.width/rect.width), y:(src.clientY-rect.top)*(cv.height/rect.height), sY:src.clientY };
 };
 
-const lpMax2 = levLen*0.84;
-const onBall = p => Math.hypot(p.x-levX, p.y-(levPivY+leverY*lpMax2)) < ballR+20;
+const onBall = p => {
+  const W=cv.width, H=cv.height;
+  const G=W*0.050, CX=W*0.038, CaW=W*0.920, CaH=H*0.970;
+  const reelY2=(H*0.010+G)+CaH*0.158+CaH*0.122, reelH2=CaH*0.268;
+  const levX2=CX+CaW+W*0.015, levPivY2=reelY2+reelH2*0.22;
+  const lpMax2=(reelH2*1.04)*0.84, ballR2=W*0.046;
+  return Math.hypot(p.x-levX2, p.y-(levPivY2+leverY*lpMax2)) < ballR2+20;
+};
+
 const onCoin = p => {
-  const mpx=iX+1,mpy=midY,mpw=iW-2,mph=midH-2;
-  const cbx=mpx+mpw*0.54,cby=mpy+mph*0.10,cbw=mpw*0.43,cbh=mph*0.80;
+  const W=cv.width, H=cv.height;
+  const G=W*0.050, iX2=W*0.038+G, iW2=W*0.920-G*2;
+  const CaH=H*0.970, reelY2=(H*0.010+G)+CaH*0.158+CaH*0.122, reelH2=CaH*0.268;
+  const midY2=reelY2+reelH2, midH2=CaH*0.108;
+  const mpx=iX2+1, mpy=midY2, mpw=iW2-2, mph=midH2-2;
+  const cbx=mpx+mpw*0.54, cby=mpy+mph*0.10, cbw=mpw*0.43, cbh=mph*0.80;
   return p.x>=cbx&&p.x<=cbx+cbw&&p.y>=cby&&p.y<=cby+cbh;
 };
 
@@ -812,34 +748,26 @@ const insertCoin = () => {
 };
 
 const triggerSpin = () => {
-  if (spinning || !coinInserted) { if(!coinInserted){resultMsg='Insert coin!';resultCol='#ff9900';} return; }
+  if (spinning||!coinInserted) { if(!coinInserted){resultMsg='Insert coin!';resultCol='#ff9900';} return; }
   credits-=BET; _addCoins(-BET); updateWallet(0,null);
   coinInserted=false; spinning=true; resultMsg=''; winAmount=0;
-  // House-edge: 70% chance reel1 != reel0, 70% chance reel2 != reel1
   const s0=Math.floor(Math.random()*SL);
   let s1=Math.floor(Math.random()*SL);
-  if(Math.random()<0.70&&STRIP[s1]===STRIP[s0]){let t2=0;while(STRIP[s1]===STRIP[s0]&&t2++<30)s1=Math.floor(Math.random()*SL);}
+  if(Math.random()<0.70&&STRIP[s1]===STRIP[s0]){let attempts=0;while(STRIP[s1]===STRIP[s0]&&attempts++<30)s1=Math.floor(Math.random()*SL);}
   let s2=Math.floor(Math.random()*SL);
-  if(Math.random()<0.70&&STRIP[s2]===STRIP[s1]){let t2=0;while(STRIP[s2]===STRIP[s1]&&t2++<30)s2=Math.floor(Math.random()*SL);}
+  if(Math.random()<0.70&&STRIP[s2]===STRIP[s1]){let attempts=0;while(STRIP[s2]===STRIP[s1]&&attempts++<30)s2=Math.floor(Math.random()*SL);}
   reels.forEach((r,i)=>{r.stopped=false;r.speed=0;r.targetOffset=-1;setTimeout(()=>{r.targetOffset=[s0,s1,s2][i];},1300+i*950);});
   haptic('medium');
 };
 
-const startDrag = (p) => { leverDragging=true; leverDragStartScreenY=p.sY; leverDragStartVal=leverY; leverVel=0; };
-const moveDrag  = (p) => {
-  const dy=(p.sY-leverDragStartScreenY)/(lpMax2*(cv.getBoundingClientRect().height/CH));
-  leverY=Math.max(0,Math.min(1,leverDragStartVal+dy));
-};
-const endDrag   = () => { leverDragging=false; if(leverY>=0.62&&!spinning) triggerSpin(); };
+cv.addEventListener('touchstart',e=>{e.preventDefault();const p=getPos(e);if(onBall(p)){leverDragging=true;leverDragStartY=p.sY;leverDragStartVal=leverY;leverVel=0;}else if(onCoin(p))insertCoin();},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();if(!leverDragging)return;const p=getPos(e);const dy=(p.sY-leverDragStartY)/(((cv.height*0.970*0.268*1.04)*0.84)*(cv.getBoundingClientRect().height/cv.height));leverY=Math.max(0,Math.min(1,leverDragStartVal+dy));},{passive:false});
+cv.addEventListener('touchend',e=>{e.preventDefault();if(leverDragging){leverDragging=false;if(leverY>=0.62&&!spinning)triggerSpin();}},{passive:false});
+cv.addEventListener('mousedown',e=>{const p=getPos(e);if(onBall(p)){leverDragging=true;leverDragStartY=p.sY;leverDragStartVal=leverY;leverVel=0;}else if(onCoin(p))insertCoin();});
+cv.addEventListener('mousemove',e=>{if(!leverDragging)return;const p=getPos(e);const dy=(p.sY-leverDragStartY)/(((cv.height*0.970*0.268*1.04)*0.84)*(cv.getBoundingClientRect().height/cv.height));leverY=Math.max(0,Math.min(1,leverDragStartVal+dy));});
+cv.addEventListener('mouseup',e=>{if(leverDragging){leverDragging=false;if(leverY>=0.62&&!spinning)triggerSpin();}});
 
-cv.addEventListener('touchstart', e=>{ e.preventDefault(); const p=getPos(e); if(onBall(p)) startDrag(p); else if(onCoin(p)) insertCoin(); },{passive:false});
-cv.addEventListener('touchmove',  e=>{ e.preventDefault(); if(leverDragging) moveDrag(getPos(e)); },{passive:false});
-cv.addEventListener('touchend',   e=>{ e.preventDefault(); if(leverDragging) endDrag(); },{passive:false});
-cv.addEventListener('mousedown',  e=>{ const p=getPos(e); if(onBall(p)) startDrag(p); else if(onCoin(p)) insertCoin(); });
-cv.addEventListener('mousemove',  e=>{ if(leverDragging) moveDrag(getPos(e)); });
-cv.addEventListener('mouseup',    e=>{ if(leverDragging) endDrag(); });
-
-wrap._slotCleanup = () => { cancelAnimationFrame(rafId); };
+wrap._slotCleanup = () => { cancelAnimationFrame(rafId); coinLayer.remove(); };
 ```
 
 };
