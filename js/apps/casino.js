@@ -1,646 +1,900 @@
 /* ════════════ CASINO 🎰 ════════════ */
+
+/* ── Wallet lives OUTSIDE initCasino so it survives app re-opens ──
+First call reads localStorage. After that the in-memory value is
+authoritative and localStorage is kept in sync on every change.   */
+const _CASINO_KEY = ‘ipocket_casino_coins’;
+let _casinoCoins = null; // null = not yet loaded
+
+const _loadCoins  = () => {
+if (_casinoCoins !== null) return; // already loaded this session
+try {
+const v = parseInt(localStorage.getItem(_CASINO_KEY));
+_casinoCoins = (!isNaN(v) && v >= 0) ? v : 1000;
+} catch(e) { _casinoCoins = 1000; }
+};
+const _saveCoins  = () => {
+try { localStorage.setItem(_CASINO_KEY, _casinoCoins); } catch(e) {}
+};
+const _addCoins   = delta => {
+_casinoCoins = Math.max(0, _casinoCoins + delta);
+_saveCoins();
+};
+
+/* ════════════════════════════════════════════════════════════════ */
 function initCasino() {
+_loadCoins(); // no-op after first call in a session
 
-  /* ── Shared wallet — persists via localStorage ── */
-  const WALLET_KEY = 'ipocket_casino_coins';
-  let COINS = (() => {
-    try { const v = parseInt(localStorage.getItem(WALLET_KEY)); return (isNaN(v) || v < 0) ? 1000 : v; }
-    catch(e) { return 1000; }
-  })();
-  const saveCoins = () => { try { localStorage.setItem(WALLET_KEY, COINS); } catch(e) {} };
-  let activeGame = null;
+let activeGame = null;
 
-  /* ── Root ── */
-  const root = document.createElement('div');
-  root.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;background:#050508;overflow:hidden;';
-  content.appendChild(root);
+/* ── Root ── */
+const root = document.createElement(‘div’);
+root.style.cssText = ‘width:100%;height:100%;display:flex;flex-direction:column;background:#050508;overflow:hidden;’;
+content.appendChild(root);
 
-  /* ── Inject styles ── */
-  if (!document.getElementById('casino-styles')) {
-    const st = document.createElement('style');
-    st.id = 'casino-styles';
-    st.textContent = `
-      @keyframes cs-deal   { from{opacity:0;transform:translateY(-40px) rotate(-8deg)} to{opacity:1;transform:translateY(0) rotate(0)} }
-      @keyframes cs-win    { 0%,100%{transform:scale(1)} 25%{transform:scale(1.18)} 75%{transform:scale(1.1)} }
-      @keyframes cs-shake  { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
-      @keyframes cs-spin-blur { from{filter:blur(4px);transform:translateY(-60px)} to{filter:blur(0);transform:translateY(0)} }
-      @keyframes cs-coins  { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-80px) scale(1.4);opacity:0} }
-      @keyframes cs-pulse  { 0%,100%{box-shadow:0 0 20px rgba(255,215,0,.4)} 50%{box-shadow:0 0 40px rgba(255,215,0,.9)} }
-      @keyframes cs-reel   { 0%{transform:translateY(0)} 100%{transform:translateY(-100%)} }
-      .cs-card-deal { animation: cs-deal .3s cubic-bezier(.34,1.56,.64,1) both; }
-      .cs-win-anim  { animation: cs-win .5s ease both; }
-      .cs-lose-anim { animation: cs-shake .4s ease both; }
-    `;
-    document.head.appendChild(st);
+/* ── Styles ── */
+if (!document.getElementById(‘casino-styles’)) {
+const st = document.createElement(‘style’);
+st.id = ‘casino-styles’;
+st.textContent = `@keyframes cs-deal  {from{opacity:0;transform:translateY(-40px) rotate(-8deg)}to{opacity:1;transform:translateY(0) rotate(0)}} @keyframes cs-win   {0%,100%{transform:scale(1)}25%{transform:scale(1.18)}75%{transform:scale(1.1)}} @keyframes cs-shake {0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}} @keyframes cs-spinb {from{filter:blur(4px);transform:translateY(-60px)}to{filter:blur(0);transform:translateY(0)}} @keyframes cs-coins {0%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-80px) scale(1.4);opacity:0}} @keyframes cs-pulse {0%,100%{box-shadow:0 0 20px rgba(255,215,0,.4)}50%{box-shadow:0 0 40px rgba(255,215,0,.9)}}`;
+document.head.appendChild(st);
+}
+
+/* ── Header ── */
+const header = document.createElement(‘div’);
+header.style.cssText = ‘flex-shrink:0;padding:89px 18px 0;background:#050508;’;
+root.appendChild(header);
+
+const headerRow = document.createElement(‘div’);
+headerRow.style.cssText = ‘display:flex;align-items:center;gap:12px;margin-bottom:14px;’;
+headerRow.innerHTML = ` <button id="cs-back" style="display:none;font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:6px 0;text-shadow:var(--gc);">← Back</button> <div id="cs-title" style="font-family:'Orbitron',sans-serif;font-size:1.05rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex:1;">🎰 Casino</div> <div id="cs-wallet" style="font-family:'Share Tech Mono',monospace;font-size:.85rem;color:#ffd700;text-shadow:0 0 12px rgba(255,215,0,.6);letter-spacing:.06em;">🪙 ${_casinoCoins.toLocaleString()}</div>`;
+header.appendChild(headerRow);
+
+/* ── Body ── */
+const body = document.createElement(‘div’);
+body.style.cssText = ‘flex:1;overflow:hidden;position:relative;’;
+root.appendChild(body);
+
+/* ── Wallet helpers ── */
+const refreshWalletDisplay = () => {
+const el = document.getElementById(‘cs-wallet’);
+if (el) el.textContent = `🪙 ${_casinoCoins.toLocaleString()}`;
+const lb = document.getElementById(‘cs-lobby-bal’);
+if (lb) lb.textContent = `🪙 ${_casinoCoins.toLocaleString()}`;
+};
+
+const updateWallet = (delta, refEl) => {
+_addCoins(delta);
+refreshWalletDisplay();
+if (delta !== 0 && refEl) {
+const float = document.createElement(‘div’);
+float.style.cssText = `position:fixed;font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;color:${delta>0?'#ffd700':'#ff6b6b'};pointer-events:none;z-index:9999;animation:cs-coins .8s ease forwards;`;
+float.textContent = (delta > 0 ? ‘+’ : ‘’) + delta.toLocaleString();
+const r = refEl.getBoundingClientRect();
+float.style.left = (r.left + r.width/2 - 30) + ‘px’;
+float.style.top  = r.top + ‘px’;
+document.body.appendChild(float);
+setTimeout(() => float.remove(), 900);
+}
+};
+
+/* ════ LOBBY ════ */
+const lobbyPanel = document.createElement(‘div’);
+lobbyPanel.style.cssText = ‘position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 60px;display:flex;flex-direction:column;gap:14px;’;
+body.appendChild(lobbyPanel);
+
+const GAMES = [
+{id:‘slots’,     name:‘Slot Machine’, ico:‘🎰’, desc:‘3 reels · Match symbols to win’,    col:’#ffd700’, grad:‘linear-gradient(135deg,#4a2800,#1a0a00)’},
+{id:‘hilo’,      name:‘Hi-Lo’,        ico:‘🃏’, desc:‘Higher or lower than the last card?’, col:’#e53935’, grad:‘linear-gradient(135deg,#2a0000,#0a0000)’},
+{id:‘blackjack’, name:‘Blackjack’,    ico:‘♠️’, desc:‘Beat the dealer · Get to 21’,         col:’#00ffcc’, grad:‘linear-gradient(135deg,#003320,#000a08)’},
+];
+
+const lobbyHdr = document.createElement(‘div’);
+lobbyHdr.style.cssText = ‘font-family:“Share Tech Mono”,monospace;font-size:.62rem;color:var(–dim);letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px;’;
+lobbyHdr.textContent = ‘Choose a game’;
+lobbyPanel.appendChild(lobbyHdr);
+
+GAMES.forEach(g => {
+const card = document.createElement(‘div’);
+card.style.cssText = `padding:22px 20px;border-radius:22px;background:${g.grad};border:1px solid ${g.col}40;box-shadow:0 4px 24px rgba(0,0,0,.5);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s;position:relative;overflow:hidden;`;
+card.innerHTML = ` <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${g.col},transparent);"></div> <div style="display:flex;align-items:center;gap:16px;"> <div style="font-size:2.8rem;line-height:1;flex-shrink:0;">${g.ico}</div> <div> <div style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.06em;color:${g.col};margin-bottom:5px;">${g.name}</div> <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.4);letter-spacing:.06em;">${g.desc}</div> </div> <div style="margin-left:auto;font-size:1.4rem;color:${g.col};opacity:.5;">›</div> </div>`;
+card.addEventListener(‘touchstart’, ()=>card.style.transform=‘scale(.97)’, {passive:true});
+card.addEventListener(‘touchend’,   ()=>card.style.transform=’’,           {passive:true});
+card.addEventListener(‘click’, () => openGame(g.id));
+lobbyPanel.appendChild(card);
+});
+
+const balCard = document.createElement(‘div’);
+balCard.style.cssText = ‘margin-top:8px;padding:18px 20px;border-radius:18px;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);text-align:center;’;
+balCard.innerHTML = ` <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:rgba(255,215,0,.5);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px;">Your Balance</div> <div id="cs-lobby-bal" style="font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px rgba(255,215,0,.5);">🪙 ${_casinoCoins.toLocaleString()}</div> <button id="cs-refill" style="margin-top:10px;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3);background:transparent;border:1px solid rgba(255,255,255,.08);padding:6px 16px;border-radius:12px;cursor:pointer;">Refill to 1,000</button>`;
+lobbyPanel.appendChild(balCard);
+
+document.getElementById(‘cs-refill’).onclick = () => {
+if (_casinoCoins < 1000) { updateWallet(1000 - _casinoCoins, balCard); haptic(‘success’); }
+};
+
+/* ── Game panels ── */
+const gamePanels = {};
+const makePanel = () => {
+const p = document.createElement(‘div’);
+p.style.cssText = ‘position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 16px 60px;transform:translateX(100%);transition:transform .32s cubic-bezier(.34,1.56,.64,1);’;
+body.appendChild(p);
+return p;
+};
+
+/* ── Open / close ── */
+const openGame = id => {
+haptic(‘medium’);
+activeGame = id;
+const g = GAMES.find(g=>g.id===id);
+document.getElementById(‘cs-title’).textContent = g.name;
+document.getElementById(‘cs-title’).style.cssText = ‘font-family:“Orbitron”,sans-serif;font-size:1rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(–cyan);text-shadow:var(–gc);flex:1;background:none;-webkit-text-fill-color:unset;’;
+document.getElementById(‘cs-back’).style.display = ‘’;
+lobbyPanel.style.transition = ‘transform .32s cubic-bezier(.34,1.56,.64,1)’;
+lobbyPanel.style.transform  = ‘translateX(-100%)’;
+if (!gamePanels[id]) {
+gamePanels[id] = makePanel();
+if (id===‘slots’)     buildSlots(gamePanels[id]);
+if (id===‘hilo’)      buildHiLo(gamePanels[id]);
+if (id===‘blackjack’) buildBlackjack(gamePanels[id]);
+}
+gamePanels[id].style.transform = ‘translateX(0)’;
+};
+
+const closeGame = () => {
+haptic(‘light’);
+if (gamePanels[activeGame]) gamePanels[activeGame].style.transform = ‘translateX(100%)’;
+lobbyPanel.style.transform = ‘translateX(0)’;
+document.getElementById(‘cs-title’).innerHTML = ‘’;
+document.getElementById(‘cs-title’).style.cssText = ‘font-family:“Orbitron”,sans-serif;font-size:1.05rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex:1;’;
+document.getElementById(‘cs-title’).textContent = ‘🎰 Casino’;
+document.getElementById(‘cs-back’).style.display = ‘none’;
+activeGame = null;
+refreshWalletDisplay();
+};
+
+document.getElementById(‘cs-back’).addEventListener(‘click’, closeGame);
+
+/* ════ SLOT MACHINE ════ */
+const buildSlots = wrap => {
+// ── DOM scaffold (no canvas sizing issues — pure DOM layout) ──
+wrap.innerHTML = ‘’;
+wrap.style.cssText = ‘position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#0a0600;display:flex;flex-direction:column;align-items:center;’;
+
+```
+// Coin overlay
+const coinLayer = document.createElement('div');
+coinLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9999;';
+document.body.appendChild(coinLayer);
+
+// Canvas container — sized after insertion so layout is real
+const container = document.createElement('div');
+container.style.cssText = 'width:100%;flex-shrink:0;';
+wrap.appendChild(container);
+
+const cv = document.createElement('canvas');
+container.appendChild(cv);
+const ctx = cv.getContext('2d');
+
+// Size canvas to container AFTER it is in DOM
+const resize = () => {
+  const W = container.offsetWidth || 360;
+  const H = Math.round(W * 1.68);
+  if (cv.width === W && cv.height === H) return;
+  cv.width = W; cv.height = H;
+  cv.style.width  = W + 'px';
+  cv.style.height = H + 'px';
+};
+resize();
+
+// ── Reel strip (24 stops, blanks dominate for house edge) ──
+const STRIP = [
+  'CHERRY','BLANK','BAR',      'BLANK',
+  'BELL',  'BLANK','TWO_BAR',  'BLANK',
+  'CHERRY','BLANK','BAR',      'BLANK',
+  'BELL',  'BLANK','THREE_BAR','BLANK',
+  'DIAMOND','BLANK','CHERRY',  'BLANK',
+  'SEVEN', 'BLANK','TWO_BAR',  'BLANK'
+];
+const SL = STRIP.length;
+
+// ── Payouts — only 3-of-a-kind or exactly 2 cherries on reels 0+1 ──
+const PAYS = {
+  'SEVEN|SEVEN|SEVEN':             100,
+  'DIAMOND|DIAMOND|DIAMOND':        50,
+  'THREE_BAR|THREE_BAR|THREE_BAR':  30,
+  'TWO_BAR|TWO_BAR|TWO_BAR':        20,
+  'BAR|BAR|BAR':                    15,
+  'BELL|BELL|BELL':                 12,
+  'CHERRY|CHERRY|CHERRY':           10
+};
+
+// ── Rounded-rect helper (no ctx.roundRect — Safari safe) ──
+const rr = (x, y, w, h, r) => {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);   ctx.arcTo(x + w, y,     x + w, y + r,     r);
+  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);   ctx.arcTo(x,     y + h, x,     y + h - r, r);
+  ctx.lineTo(x, y + r);       ctx.arcTo(x,     y,     x + r, y,         r);
+  ctx.closePath();
+};
+
+// ── Gold gradient ──
+const gold = (x1, y1, x2, y2) => {
+  const g = ctx.createLinearGradient(x1, y1, x2, y2);
+  g.addColorStop(0,   '#7a5000');
+  g.addColorStop(0.2, '#f0c000');
+  g.addColorStop(0.5, '#ffe566');
+  g.addColorStop(0.8, '#f0c000');
+  g.addColorStop(1,   '#7a5000');
+  return g;
+};
+
+// ── Draw one symbol centred at (0,0) ──
+const drawSym = (sym, sz, alpha) => {
+  if (alpha <= 0.02) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, alpha);
+  const h = sz * 0.76;
+
+  if (sym === 'CHERRY') {
+    const r2 = h * 0.20;
+    ctx.strokeStyle = '#1a5200'; ctx.lineWidth = h * 0.06; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-r2, -h * 0.10);
+    ctx.quadraticCurveTo(0, -h * 0.40, r2, -h * 0.10);
+    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r2, -h * 0.10); ctx.lineTo(-r2, h * 0.10 - r2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r2, -h * 0.10); ctx.lineTo(r2, h * 0.06 - r2); ctx.stroke();
+    const g1 = ctx.createRadialGradient(-r2 * 1.2, -h*0.02, 0, -r2, h*0.10, r2);
+    g1.addColorStop(0, '#ff9999'); g1.addColorStop(0.5, '#dd0000'); g1.addColorStop(1, '#880000');
+    ctx.beginPath(); ctx.arc(-r2, h * 0.10, r2, 0, Math.PI * 2);
+    ctx.fillStyle = g1; ctx.fill(); ctx.strokeStyle = '#660000'; ctx.lineWidth = 0.8; ctx.stroke();
+    const g2 = ctx.createRadialGradient(r2 * 0.75, -h*0.04, 0, r2, h*0.06, r2);
+    g2.addColorStop(0, '#ff9999'); g2.addColorStop(0.5, '#ee0000'); g2.addColorStop(1, '#880000');
+    ctx.beginPath(); ctx.arc(r2, h * 0.06, r2, 0, Math.PI * 2);
+    ctx.fillStyle = g2; ctx.fill(); ctx.strokeStyle = '#660000'; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-r2 - r2*0.18, h*0.02, r2*0.26, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.44)'; ctx.fill();
+
+  } else if (sym === 'BAR') {
+    const bw = h*0.82, bh = h*0.27;
+    const g3 = ctx.createLinearGradient(-bw/2, -bh/2, -bw/2, bh/2);
+    g3.addColorStop(0,'#999'); g3.addColorStop(0.3,'#fff'); g3.addColorStop(0.65,'#ccc'); g3.addColorStop(1,'#555');
+    rr(-bw/2, -bh/2, bw, bh, bh*0.28); ctx.fillStyle = g3; ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = '#1a1a1a'; ctx.font = '900 ' + Math.round(bh*0.70) + 'px Arial,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BAR', 0, 1);
+
+  } else if (sym === 'TWO_BAR') {
+    const bw = h*0.80, bh = h*0.17, gap = h*0.115;
+    [-1, 1].forEach(d => {
+      const g4 = ctx.createLinearGradient(-bw/2, d*gap-bh/2, -bw/2, d*gap+bh/2);
+      g4.addColorStop(0,'#999'); g4.addColorStop(0.3,'#fff'); g4.addColorStop(0.7,'#bbb'); g4.addColorStop(1,'#555');
+      rr(-bw/2, d*gap-bh/2, bw, bh, bh*0.28); ctx.fillStyle = g4; ctx.fill();
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.fillStyle = '#111'; ctx.font = '900 ' + Math.round(bh*0.70) + 'px Arial,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BAR', 0, d*gap + 0.5);
+    });
+
+  } else if (sym === 'THREE_BAR') {
+    const bw = h*0.78, bh = h*0.13, gap = h*0.10;
+    [-1, 0, 1].forEach(d => {
+      const g5 = ctx.createLinearGradient(-bw/2, d*gap-bh/2, -bw/2, d*gap+bh/2);
+      g5.addColorStop(0,'#888'); g5.addColorStop(0.3,'#eee'); g5.addColorStop(0.7,'#bbb'); g5.addColorStop(1,'#444');
+      rr(-bw/2, d*gap-bh/2, bw, bh, bh*0.28); ctx.fillStyle = g5; ctx.fill();
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 0.6; ctx.stroke();
+      ctx.fillStyle = '#111'; ctx.font = '700 ' + Math.round(bh*0.70) + 'px Arial,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('BAR', 0, d*gap + 0.5);
+    });
+
+  } else if (sym === 'BELL') {
+    const br = h * 0.34;
+    ctx.beginPath();
+    ctx.moveTo(-br*0.66, br*0.30);
+    ctx.bezierCurveTo(-br*0.66, -br*0.36, -br*0.18, -br*0.90, 0, -br*0.90);
+    ctx.bezierCurveTo(br*0.18, -br*0.90, br*0.66, -br*0.36, br*0.66, br*0.30);
+    ctx.closePath();
+    const bg = ctx.createLinearGradient(-br, -br, br, br*0.5);
+    bg.addColorStop(0,'#ffe066'); bg.addColorStop(0.4,'#ffd700'); bg.addColorStop(1,'#a06800');
+    ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = '#806000'; ctx.lineWidth = 1.2; ctx.stroke();
+    rr(-br*0.72, br*0.22, br*1.44, br*0.20, br*0.08);
+    ctx.fillStyle = '#b08000'; ctx.fill(); ctx.strokeStyle = '#806000'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, br*0.44, br*0.13, 0, Math.PI*2);
+    ctx.fillStyle = '#a06800'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-br*0.16, -br*0.26, br*0.19, br*0.11, -0.5, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.fill();
+
+  } else if (sym === 'DIAMOND') {
+    const dr = h * 0.35;
+    const pts = [[0,-dr],[dr*0.62,-dr*0.08],[dr*0.52,dr*0.50],[0,dr],[-dr*0.52,dr*0.50],[-dr*0.62,-dr*0.08]];
+    ctx.beginPath();
+    pts.forEach(([x2, y2], i) => i === 0 ? ctx.moveTo(x2, y2) : ctx.lineTo(x2, y2));
+    ctx.closePath();
+    const dg = ctx.createLinearGradient(-dr, -dr, dr, dr);
+    dg.addColorStop(0,'#e8f8ff'); dg.addColorStop(0.25,'#bbddff'); dg.addColorStop(0.55,'#4499ee'); dg.addColorStop(1,'#0044bb');
+    ctx.fillStyle = dg; ctx.fill(); ctx.strokeStyle = '#0033aa'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.48)'; ctx.lineWidth = 0.8;
+    [[pts[0],pts[2]],[pts[0],pts[3]],[pts[0],pts[4]],[pts[5],pts[2]]].forEach(([a, b]) => {
+      ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    });
+    ctx.beginPath(); ctx.ellipse(-dr*0.10, -dr*0.30, dr*0.20, dr*0.11, -0.4, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.60)'; ctx.fill();
+
+  } else if (sym === 'SEVEN') {
+    ctx.font = '900 ' + Math.round(h*0.76) + 'px Arial,sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#440000'; ctx.lineWidth = h*0.10; ctx.strokeText('7', 0, h*0.04);
+    const tg = ctx.createLinearGradient(0, -h*0.36, 0, h*0.36);
+    tg.addColorStop(0,'#ffaaaa'); tg.addColorStop(0.4,'#ff2200'); tg.addColorStop(1,'#880000');
+    ctx.fillStyle = tg; ctx.fillText('7', 0, h*0.04);
   }
+  ctx.restore();
+};
 
-  /* ══════════════════════════════════════
-     HEADER
-  ══════════════════════════════════════ */
-  const header = document.createElement('div');
-  header.style.cssText = 'flex-shrink:0;padding:89px 18px 0;background:#050508;';
-  root.appendChild(header);
+// ── Reel state ──
+const reels = [0,1,2].map(() => ({
+  offset: Math.floor(Math.random() * SL) * 1.0,
+  speed: 0, targetOffset: -1, stopped: true
+}));
 
-  const headerRow = document.createElement('div');
-  headerRow.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:14px;';
-  headerRow.innerHTML = `
-    <button id="cs-back" style="display:none;font-family:'Orbitron',sans-serif;font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;padding:6px 0;text-shadow:var(--gc);">← Back</button>
-    <div id="cs-title" style="font-family:'Orbitron',sans-serif;font-size:1.05rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex:1;">🎰 Casino</div>
-    <div id="cs-wallet" style="font-family:'Share Tech Mono',monospace;font-size:.85rem;color:#ffd700;text-shadow:0 0 12px rgba(255,215,0,.6);letter-spacing:.06em;">🪙 1,000</div>`;
-  header.appendChild(headerRow);
+// ── Game state ──
+const BET = 50;
+let credits      = _casinoCoins;
+let coinInserted = false;
+let spinning     = false;
+let leverY       = 0;
+let leverDragging = false;
+let leverDragStartY = 0;
+let leverDragStartVal = 0;
+let leverVel     = 0;
+let resultMsg    = '';
+let resultCol    = '#ffd700';
+let winAmount    = 0;
+let flashT       = 0;
+let rafId        = null;
 
-  /* ── Game nav tabs (shown when in a game) ── */
-  const gameTabs = document.createElement('div');
-  gameTabs.style.cssText = 'display:none;flex;gap:6px;margin-bottom:14px;';
-  gameTabs.id = 'cs-tabs';
-  header.appendChild(gameTabs);
-
-  /* ── Body ── */
-  const body = document.createElement('div');
-  body.style.cssText = 'flex:1;overflow:hidden;position:relative;';
-  root.appendChild(body);
-
-  /* ── Update wallet display ── */
-  const updateWallet = (delta, el) => {
-    COINS += delta;
-    if (COINS < 0) COINS = 0;
-    saveCoins();
-    document.getElementById('cs-wallet').textContent = `🪙 ${COINS.toLocaleString()}`;
-    // Floating coin animation
-    if (delta !== 0 && el) {
-      const float = document.createElement('div');
-      const win = delta > 0;
-      float.style.cssText = `position:fixed;font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;color:${win?'#ffd700':'#ff6b6b'};pointer-events:none;z-index:9999;animation:cs-coins .8s ease forwards;`;
-      float.textContent = (win ? '+' : '') + delta.toLocaleString();
-      const r = el.getBoundingClientRect();
-      float.style.left = r.left + r.width/2 - 30 + 'px';
-      float.style.top  = r.top + 'px';
-      document.body.appendChild(float);
-      setTimeout(() => float.remove(), 900);
+// ── Draw reel drum ──
+const drawReel = (idx, rx, ry, rw, rh) => {
+  const R = reels[idx];
+  const symH = rh / 3;
+  rr(rx, ry, rw, rh, 4);
+  const ibg = ctx.createLinearGradient(rx, ry, rx+rw, ry);
+  ibg.addColorStop(0,'#ddd8c0'); ibg.addColorStop(0.5,'#f5f0e2'); ibg.addColorStop(1,'#d8d2ba');
+  ctx.fillStyle = ibg; ctx.fill();
+  ctx.save(); rr(rx, ry, rw, rh, 4); ctx.clip();
+  const base = Math.floor(R.offset), frac = R.offset - base;
+  for (let row = -1; row <= 3; row++) {
+    const si  = ((base + row) % SL + SL) % SL;
+    const sym = STRIP[si];
+    const rawCY = ry + (row - frac) * symH + symH * 0.5;
+    if (rawCY < ry - symH || rawCY > ry + rh + symH) continue;
+    const norm  = (rawCY - (ry + rh * 0.5)) / (rh * 0.5);
+    const scale = Math.max(0.22, Math.cos(norm * Math.PI * 0.43));
+    const alpha = Math.max(0, 1 - Math.abs(norm) * 1.20);
+    ctx.save(); ctx.translate(rx + rw * 0.5, rawCY); ctx.scale(1, scale);
+    drawSym(sym, symH, alpha);
+    ctx.restore();
+    const lineY = ry + (row - frac + 1) * symH;
+    if (lineY > ry + 1 && lineY < ry + rh - 1) {
+      ctx.strokeStyle = 'rgba(170,155,120,0.25)'; ctx.lineWidth = 0.7;
+      ctx.beginPath(); ctx.moveTo(rx+3, lineY); ctx.lineTo(rx+rw-3, lineY); ctx.stroke();
     }
-  };
+  }
+  ctx.restore();
+  const ts = ctx.createLinearGradient(rx, ry, rx, ry+rh*0.22);
+  ts.addColorStop(0,'rgba(0,0,0,0.52)'); ts.addColorStop(1,'rgba(0,0,0,0)');
+  rr(rx, ry, rw, rh*0.22, 4); ctx.fillStyle = ts; ctx.fill();
+  const bs = ctx.createLinearGradient(rx, ry+rh*0.78, rx, ry+rh);
+  bs.addColorStop(0,'rgba(0,0,0,0)'); bs.addColorStop(1,'rgba(0,0,0,0.52)');
+  rr(rx, ry+rh*0.78, rw, rh*0.22, 4); ctx.fillStyle = bs; ctx.fill();
+  rr(rx-2.5, ry-2.5, rw+5, rh+5, 6);
+  ctx.strokeStyle = gold(rx-2.5,ry-2.5,rx+rw+2.5,ry+rh+2.5); ctx.lineWidth = 3.5; ctx.stroke();
+};
 
-  /* ════════════════════════════════════════
-     LOBBY
-  ════════════════════════════════════════ */
-  const lobbyPanel = document.createElement('div');
-  lobbyPanel.style.cssText = 'position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 60px;display:flex;flex-direction:column;gap:14px;';
-  body.appendChild(lobbyPanel);
+// ── Main draw ──
+const draw = () => {
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  const t = flashT;
 
-  const GAMES = [
-    { id:'slots',   name:'Slot Machine',  ico:'🎰', desc:'3 reels · Match symbols to win',   col:'#ffd700', grad:'linear-gradient(135deg,#4a2800,#1a0a00)' },
-    { id:'hilo',    name:'Hi-Lo',          ico:'🃏', desc:'Higher or lower than the last card?',col:'#e53935', grad:'linear-gradient(135deg,#2a0000,#0a0000)' },
-    { id:'blackjack',name:'Blackjack',     ico:'♠️', desc:'Beat the dealer · Get to 21',       col:'#00ffcc', grad:'linear-gradient(135deg,#003320,#000a08)' },
-  ];
+  // Layout constants computed from actual canvas size
+  const G    = W * 0.050;
+  const CX   = W * 0.038, CY = H * 0.010;
+  const CaW  = W * 0.920, CaH = H * 0.970;
+  const iX   = CX + G,   iW  = CaW - G * 2;
+  const signY = CY + G,   signH = CaH * 0.158;
+  const payY  = signY + signH, payH = CaH * 0.122;
+  const reelY = payY + payH,   reelH = CaH * 0.268;
+  const midY  = reelY + reelH, midH  = CaH * 0.108;
+  const lowY  = midY + midH,   lowH  = CaH * 0.244;
+  const trayY = lowY + lowH,   trayH = CaH - (trayY - CY) - G;
+  const sideW = iW * 0.082;
+  const rAreaX = iX + sideW, rAreaW = iW - sideW * 2;
+  const rGap = W * 0.012, rW = (rAreaW - rGap * 2) / 3;
+  const levX = CX + CaW + W * 0.015;
+  const levPivY = reelY + reelH * 0.22;
+  const levLen = reelH * 1.04, ballR = W * 0.046;
+  const lpMax = levLen * 0.84;
+  const curBY = levPivY + leverY * lpMax;
 
-  // Header for lobby
-  const lobbyHdr = document.createElement('div');
-  lobbyHdr.style.cssText = 'font-family:"Share Tech Mono",monospace;font-size:.62rem;color:var(--dim);letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px;';
-  lobbyHdr.textContent = 'Choose a game';
-  lobbyPanel.appendChild(lobbyHdr);
+  // Cabinet
+  rr(CX, CY, CaW, CaH, W*0.028); ctx.fillStyle = '#100a00'; ctx.fill();
+  rr(CX, CY, CaW, CaH, W*0.028);
+  ctx.strokeStyle = gold(CX,CY,CX+CaW,CY+CaH); ctx.lineWidth = G*2; ctx.stroke();
+  rr(CX+G*0.55, CY+G*0.55, CaW-G*1.1, CaH-G*1.1, W*0.022);
+  ctx.strokeStyle = 'rgba(255,210,60,0.30)'; ctx.lineWidth = 1; ctx.stroke();
 
-  GAMES.forEach(g => {
-    const card = document.createElement('div');
-    card.style.cssText = `padding:22px 20px;border-radius:22px;background:${g.grad};border:1px solid ${g.col}40;box-shadow:0 4px 24px rgba(0,0,0,.5),0 0 0 0 ${g.col};cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden;`;
-    card.innerHTML = `
-      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${g.col},transparent);"></div>
-      <div style="display:flex;align-items:center;gap:16px;">
-        <div style="font-size:2.8rem;line-height:1;flex-shrink:0;">${g.ico}</div>
-        <div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.06em;color:${g.col};margin-bottom:5px;">${g.name}</div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.4);letter-spacing:.06em;">${g.desc}</div>
-        </div>
-        <div style="margin-left:auto;font-size:1.4rem;color:${g.col};opacity:.5;">›</div>
-      </div>`;
-    card.addEventListener('touchstart', () => { card.style.transform='scale(.97)'; }, {passive:true});
-    card.addEventListener('touchend',   () => { card.style.transform=''; }, {passive:true});
-    card.addEventListener('click', () => openGame(g.id));
-    lobbyPanel.appendChild(card);
+  // Top sign
+  const sx = iX+1, sy = signY, sw2 = iW-2, sh = signH-3;
+  rr(sx,sy,sw2,sh,W*0.016);
+  const sgbg = ctx.createLinearGradient(sx,sy,sx,sy+sh);
+  sgbg.addColorStop(0,'#06061a'); sgbg.addColorStop(0.5,'#0c0c28'); sgbg.addColorStop(1,'#06061a');
+  ctx.fillStyle = sgbg; ctx.fill();
+  rr(sx,sy,sw2,sh,W*0.016); ctx.strokeStyle = gold(sx,sy,sx+sw2,sy+sh); ctx.lineWidth = 2.2; ctx.stroke();
+
+  // Dot border
+  [sy+sh*0.10, sy+sh*0.90].forEach(dotY => {
+    for (let i = 0; i < 22; i++) {
+      const bx = sx + sw2*0.06 + i*(sw2*0.88/21);
+      const on = (Math.floor(t*5+i*1.3)%3 !== 2) || winAmount > 0;
+      ctx.beginPath(); ctx.arc(bx, dotY, 2.2, 0, Math.PI*2);
+      ctx.fillStyle = on ? '#ffd700' : '#443300'; ctx.fill();
+      if (on) { ctx.shadowColor='#ffd700'; ctx.shadowBlur=5; ctx.fill(); ctx.shadowBlur=0; }
+    }
   });
 
-  // Balance card
-  const balCard = document.createElement('div');
-  balCard.style.cssText = 'margin-top:8px;padding:18px 20px;border-radius:18px;background:rgba(255,215,0,.05);border:1px solid rgba(255,215,0,.15);text-align:center;';
-  balCard.innerHTML = `
-    <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:rgba(255,215,0,.5);letter-spacing:.18em;text-transform:uppercase;margin-bottom:6px;">Your Balance</div>
-    <div id="cs-lobby-bal" style="font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;color:#ffd700;text-shadow:0 0 20px rgba(255,215,0,.5);">🪙 1,000</div>
-    <button id="cs-refill" style="margin-top:10px;font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3);background:transparent;border:1px solid rgba(255,255,255,.08);padding:6px 16px;border-radius:12px;cursor:pointer;">Refill to 1,000</button>`;
-  lobbyPanel.appendChild(balCard);
-
-  document.getElementById('cs-refill').onclick = () => {
-    if (COINS < 1000) { updateWallet(1000 - COINS, balCard); refreshLobbyBal(); saveCoins(); haptic('success'); }
-  };
-  const refreshLobbyBal = () => {
-    const el = document.getElementById('cs-lobby-bal');
-    if (el) el.textContent = `🪙 ${COINS.toLocaleString()}`;
-  };
-
-  /* ── Game panels ── */
-  const gamePanels = {};
-  const makeGamePanel = () => {
-    const p = document.createElement('div');
-    p.style.cssText = 'position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 16px 60px;transform:translateX(100%);transition:transform .32s cubic-bezier(.34,1.56,.64,1);';
-    body.appendChild(p);
-    return p;
-  };
-
-  /* ════════════════════════════════════════
-     OPEN / CLOSE GAME
-  ════════════════════════════════════════ */
-  const openGame = id => {
-    haptic('medium');
-    activeGame = id;
-    document.getElementById('cs-title').textContent = GAMES.find(g=>g.id===id)?.name || 'Game';
-    document.getElementById('cs-title').style.cssText = 'font-family:"Orbitron",sans-serif;font-size:1rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);text-shadow:var(--gc);flex:1;background:none;-webkit-text-fill-color:unset;';
-    document.getElementById('cs-back').style.display = '';
-
-    lobbyPanel.style.transition = 'transform .32s cubic-bezier(.34,1.56,.64,1)';
-    lobbyPanel.style.transform  = 'translateX(-100%)';
-
-    if (!gamePanels[id]) {
-      gamePanels[id] = makeGamePanel();
-      if (id === 'slots')     buildSlots(gamePanels[id]);
-      if (id === 'hilo')      buildHiLo(gamePanels[id]);
-      if (id === 'blackjack') buildBlackjack(gamePanels[id]);
+  // Art-Deco fans
+  [[sx+sw2*0.08,sy+sh*0.54,1],[sx+sw2*0.92,sy+sh*0.54,-1]].forEach(([fx,fy,d]) => {
+    ctx.save(); ctx.translate(fx,fy); ctx.scale(d,1);
+    const fr = sh*0.36;
+    for (let a = -Math.PI*0.40; a <= Math.PI*0.40; a += Math.PI/6) {
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*fr, Math.sin(a)*fr);
+      ctx.strokeStyle='#d4a800'; ctx.lineWidth=1.2; ctx.stroke();
     }
-    gamePanels[id].style.transform = 'translateX(0)';
-  };
+    ctx.restore();
+  });
 
-  const closeGame = () => {
-    haptic('light');
-    if (gamePanels[activeGame]) gamePanels[activeGame].style.transform = 'translateX(100%)';
-    lobbyPanel.style.transform = 'translateX(0)';
-    document.getElementById('cs-title').innerHTML = '';
-    document.getElementById('cs-title').style.cssText = 'font-family:"Orbitron",sans-serif;font-size:1.05rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;flex:1;';
-    document.getElementById('cs-title').textContent = '🎰 Casino';
-    document.getElementById('cs-back').style.display = 'none';
-    activeGame = null;
-    refreshLobbyBal();
-  };
+  // BAR side text
+  [[sx+sw2*0.02,'left'],[sx+sw2*0.98,'right']].forEach(([bx2,al]) => {
+    ctx.textAlign = al; ctx.font = '700 '+Math.round(sh*0.088)+'px Arial,sans-serif'; ctx.fillStyle='#cc9900';
+    ['BAR','BAR','BAR'].forEach((txt,i) => ctx.fillText(txt, bx2, sy+sh*0.35+i*sh*0.20));
+  });
 
-  document.getElementById('cs-back').addEventListener('click', closeGame);
+  // Diamond + CRAZY DIAMONDS text on sign
+  ctx.save(); ctx.translate(sx+sw2*0.5, sy+sh*0.24); drawSym('DIAMOND', sh*0.36, 1); ctx.restore();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font = '900 '+Math.round(sh*0.21)+'px Arial,sans-serif';
+  ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.04; ctx.strokeText('CRAZY', sx+sw2*0.5, sy+sh*0.52);
+  const g1 = ctx.createLinearGradient(sx,sy+sh*0.43,sx,sy+sh*0.61);
+  g1.addColorStop(0,'#fff0a0'); g1.addColorStop(1,'#c89000'); ctx.fillStyle=g1;
+  ctx.fillText('CRAZY', sx+sw2*0.5, sy+sh*0.52);
+  ctx.font = '900 '+Math.round(sh*0.28)+'px Arial,sans-serif';
+  ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.05; ctx.strokeText('DIAMONDS', sx+sw2*0.5, sy+sh*0.79);
+  const g2 = ctx.createLinearGradient(sx,sy+sh*0.66,sx,sy+sh*0.90);
+  g2.addColorStop(0,'#fff0a0'); g2.addColorStop(1,'#c89000'); ctx.fillStyle=g2;
+  ctx.fillText('DIAMONDS', sx+sw2*0.5, sy+sh*0.79);
 
-  /* ════════════════════════════════════════
-     🎰 SLOT MACHINE
-  ════════════════════════════════════════ */
-  const buildSlots = wrap => {
-    const SYMBOLS = ['🍒','🍋','🍊','🍇','⭐','💎','7️⃣','🔔'];
-    const PAYS = {
-      '7️⃣7️⃣7️⃣':50, '💎💎💎':30, '⭐⭐⭐':20,
-      '🔔🔔🔔':15, '🍇🍇🍇':10, '🍊🍊🍊':8,
-      '🍋🍋🍋':6,  '🍒🍒🍒':5,
-      // Two match
-      '💎💎':3, '7️⃣7️⃣':3, '⭐⭐':2,
-      '🍒🍒':2, '🔔🔔':2,
-    };
-    let bet = 10, spinning = false;
-    let reelVals = ['🍒','🍒','🍒'];
+  // Pay table panel
+  const px = iX+1, py = payY, pw = iW-2, ph = payH-2;
+  rr(px,py,pw,ph,3); ctx.fillStyle='#f0ead8'; ctx.fill();
+  rr(px,py,pw,ph,3); ctx.strokeStyle=gold(px,py,px+pw,py+ph); ctx.lineWidth=2; ctx.stroke();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='900 '+Math.round(ph*0.23)+'px Arial,sans-serif'; ctx.fillStyle='#000080';
+  ctx.fillText('WINS', px+pw*0.5, py+ph*0.17);
+  const entries=[['Diam x3','x50'],['3xBAR','x30'],['2xBAR','x20'],['BAR x3','x15'],['Bell x3','x12'],['Cherry x3','x10']];
+  const mw=pw*0.27, mh=ph*0.31;
+  entries.forEach(([k,v],i) => {
+    const ex=px+pw*0.04+(i%3)*(mw+pw*0.025), ey=py+ph*0.33+Math.floor(i/3)*(mh+ph*0.04);
+    rr(ex,ey,mw,mh,2);
+    const ebg=ctx.createLinearGradient(ex,ey,ex,ey+mh);
+    ebg.addColorStop(0,'#fff8e8'); ebg.addColorStop(1,'#e8dfc0');
+    ctx.fillStyle=ebg; ctx.fill(); ctx.strokeStyle='#aaa'; ctx.lineWidth=0.7; ctx.stroke();
+    ctx.textAlign='left'; ctx.font='600 '+Math.round(mh*0.34)+'px Arial,sans-serif'; ctx.fillStyle='#222';
+    ctx.fillText(k, ex+2, ey+mh*0.40);
+    ctx.textAlign='right'; ctx.font='900 '+Math.round(mh*0.37)+'px Arial,sans-serif'; ctx.fillStyle='#880000';
+    ctx.fillText(v, ex+mw-2, ey+mh*0.62);
+  });
 
-    const mkPayout = () => {
-      const rows = Object.entries(PAYS).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);"><span style="font-size:.8rem;">${k}</span><span style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:#ffd700;">×${v}</span></div>`).join('');
-      return `<div style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">Payouts (× bet)</div>${rows}`;
-    };
+  // Side PAYLINE strips
+  [[iX, iX+sideW-1],[iX+iW-sideW+1, iX+iW-1]].forEach(([lx2, rx2]) => {
+    const sw3=rx2-lx2;
+    rr(lx2,reelY,sw3,reelH,3);
+    const sbg=ctx.createLinearGradient(lx2,reelY,lx2,reelY+reelH);
+    sbg.addColorStop(0,'#1a0d00'); sbg.addColorStop(1,'#0d0800');
+    ctx.fillStyle=sbg; ctx.fill();
+    rr(lx2,reelY,sw3,reelH,3); ctx.strokeStyle=gold(lx2,reelY,rx2,reelY+reelH); ctx.lineWidth=2; ctx.stroke();
+    ctx.save(); ctx.translate(lx2+sw3*0.5, reelY+reelH*0.5); ctx.rotate(-Math.PI/2);
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='900 '+Math.round(sw3*0.35)+'px Arial,sans-serif';
+    ctx.fillStyle='#ffd700'; ctx.strokeStyle='#000'; ctx.lineWidth=1;
+    ctx.strokeText('PAYLINE',0,0); ctx.fillText('PAYLINE',0,0);
+    ctx.restore();
+  });
 
-    wrap.innerHTML = `
-      <!-- Reel window -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:20px;padding-top:10px;">
-        <!-- Reels -->
-        <div style="position:relative;background:linear-gradient(180deg,#0a0800,#1a1200,#0a0800);border:2px solid rgba(255,215,0,.3);border-radius:20px;padding:8px;box-shadow:0 0 30px rgba(255,215,0,.1),inset 0 0 20px rgba(0,0,0,.8);">
-          <!-- Scan line -->
-          <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:68px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.2);border-radius:10px;pointer-events:none;z-index:2;"></div>
-          <div style="display:flex;gap:8px;position:relative;z-index:1;" id="sl-reels">
-            ${[0,1,2].map(i=>`<div id="sl-reel-${i}" style="width:72px;height:68px;display:flex;align-items:center;justify-content:center;font-size:2.6rem;border-radius:10px;background:rgba(255,255,255,.04);overflow:hidden;position:relative;">🍒</div>`).join('')}
-          </div>
-        </div>
+  // Reel window
+  rr(rAreaX-5,reelY-5,rAreaW+10,reelH+10,7); ctx.fillStyle='#1a1a1a'; ctx.fill();
+  rr(rAreaX-5,reelY-5,rAreaW+10,reelH+10,7);
+  ctx.strokeStyle=gold(rAreaX-5,reelY-5,rAreaX+rAreaW+5,reelY+reelH+5); ctx.lineWidth=5; ctx.stroke();
 
-        <!-- Win display -->
-        <div id="sl-result" style="font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;letter-spacing:.1em;min-height:28px;text-align:center;"></div>
+  // Reels
+  for (let i=0; i<3; i++) drawReel(i, rAreaX+i*(rW+rGap), reelY, rW, reelH);
 
-        <!-- Bet controls -->
-        <div style="display:flex;align-items:center;gap:14px;">
-          <button id="sl-bd" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">−</button>
-          <div style="text-align:center;">
-            <div style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;">BET</div>
-            <div id="sl-bet" style="font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;color:#ffd700;">10</div>
-          </div>
-          <button id="sl-bu" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">+</button>
-          <button id="sl-max" style="font-family:'Orbitron',sans-serif;font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;color:#ffd700;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.25);padding:8px 14px;border-radius:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;">MAX</button>
-        </div>
+  // Payline
+  const plY = reelY + reelH * 0.5;
+  ctx.strokeStyle = (winAmount>0 && Math.sin(t*7)>0) ? '#ff3300' : 'rgba(255,50,0,0.55)';
+  ctx.lineWidth=2; ctx.setLineDash([5,5]);
+  ctx.beginPath(); ctx.moveTo(iX+1,plY); ctx.lineTo(iX+iW-1,plY); ctx.stroke();
+  ctx.setLineDash([]);
 
-        <!-- Spin button -->
-        <button id="sl-spin" style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#050508;background:linear-gradient(135deg,#ffd700,#ff8c00);border:none;padding:18px 52px;border-radius:50px;cursor:pointer;box-shadow:0 4px 24px rgba(255,165,0,.5);-webkit-tap-highlight-color:transparent;transition:transform .1s;animation:cs-pulse 2s infinite;">SPIN</button>
+  // Mid panel
+  const mpx=iX+1, mpy=midY, mpw=iW-2, mph=midH-2;
+  rr(mpx,mpy,mpw,mph,4);
+  const mpbg=ctx.createLinearGradient(mpx,mpy,mpx,mpy+mph);
+  mpbg.addColorStop(0,'#0d0800'); mpbg.addColorStop(1,'#060400');
+  ctx.fillStyle=mpbg; ctx.fill();
+  rr(mpx,mpy,mpw,mph,4); ctx.strokeStyle=gold(mpx,mpy,mpx+mpw,mpy+mph); ctx.lineWidth=1.8; ctx.stroke();
+  ctx.font=Math.round(mph*0.20)+'px monospace';
+  ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle='rgba(255,100,0,0.28)';
+  ctx.fillText('CREDITS', mpx+8, mpy+mph*0.28);
+  ctx.font='900 '+Math.round(mph*0.44)+'px monospace';
+  ctx.fillStyle='#ff6600'; ctx.shadowColor='#ff4400'; ctx.shadowBlur=7;
+  ctx.fillText(Math.round(credits).toLocaleString(), mpx+8, mpy+mph*0.76);
+  ctx.shadowBlur=0;
 
-        <!-- Payout table -->
-        <div style="width:100%;max-width:320px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:14px 16px;">
-          ${mkPayout()}
-        </div>
-      </div>`;
+  // Insert coin button
+  const cbx=mpx+mpw*0.54, cby=mpy+mph*0.10, cbw=mpw*0.43, cbh=mph*0.80;
+  rr(cbx,cby,cbw,cbh,cbh*0.38);
+  const cbg2=ctx.createLinearGradient(cbx,cby,cbx,cby+cbh);
+  if (coinInserted) { cbg2.addColorStop(0,'#553300'); cbg2.addColorStop(1,'#332200'); }
+  else              { cbg2.addColorStop(0,'#d48000'); cbg2.addColorStop(0.5,'#ffaa00'); cbg2.addColorStop(1,'#996000'); }
+  ctx.fillStyle=cbg2; ctx.fill(); ctx.strokeStyle='#442200'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(cbx+cbw*0.5,cby+cbh*0.27,cbw*0.32,cbh*0.13,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.fill();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='900 '+Math.round(cbh*0.21)+'px Arial,sans-serif';
+  ctx.fillStyle=coinInserted?'#886600':'#111';
+  ctx.fillText('INSERT', cbx+cbw*0.5, cby+cbh*0.35);
+  ctx.fillText('COIN', cbx+cbw*0.5, cby+cbh*0.60);
+  ctx.font='700 '+Math.round(cbh*0.18)+'px Arial,sans-serif';
+  ctx.fillText('('+BET+')', cbx+cbw*0.5, cby+cbh*0.83);
 
-    // Wire up
-    const betEl   = document.getElementById('sl-bet');
-    const resultEl = document.getElementById('sl-result');
-    const spinBtn  = document.getElementById('sl-spin');
+  // Result
+  if (resultMsg) {
+    const vis = winAmount>0 ? (Math.sin(t*5.5)>0.05) : true;
+    if (vis) {
+      ctx.font='900 '+Math.round(mph*0.27)+'px Arial,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.strokeStyle='#000'; ctx.lineWidth=2.5;
+      ctx.strokeText(resultMsg, mpx+mpw*0.27, mpy+mph*0.52);
+      ctx.fillStyle=resultCol; ctx.fillText(resultMsg, mpx+mpw*0.27, mpy+mph*0.52);
+    }
+  }
 
-    const setBet = v => { bet = Math.max(5, Math.min(200, v)); betEl.textContent = bet; };
-    document.getElementById('sl-bd').onclick  = () => { haptic('light'); setBet(bet - 5); };
-    document.getElementById('sl-bu').onclick  = () => { haptic('light'); setBet(bet + 5); };
-    document.getElementById('sl-max').onclick = () => { haptic('light'); setBet(200); };
+  // Lower body
+  const lx=iX+1, ly=lowY, lw=iW-2, lh=lowH-2;
+  rr(lx,ly,lw,lh,4);
+  const lbg2=ctx.createLinearGradient(lx,ly,lx,ly+lh);
+  lbg2.addColorStop(0,'#0d0800'); lbg2.addColorStop(1,'#080500');
+  ctx.fillStyle=lbg2; ctx.fill();
+  rr(lx,ly,lw,lh,4); ctx.strokeStyle=gold(lx,ly,lx+lw,ly+lh); ctx.lineWidth=1.8; ctx.stroke();
+  ctx.save(); ctx.translate(lx+lw*0.5, ly+lh*0.34); drawSym('DIAMOND', lh*0.42, 0.70); ctx.restore();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.font='900 '+Math.round(lh*0.14)+'px Arial,sans-serif';
+  ctx.strokeStyle='#000'; ctx.lineWidth=2.5; ctx.strokeText('CRAZY DIAMONDS', lx+lw*0.5, ly+lh*0.72);
+  const ld=ctx.createLinearGradient(lx,ly+lh*0.65,lx,ly+lh*0.80);
+  ld.addColorStop(0,'#fff0a0'); ld.addColorStop(1,'#c89000'); ctx.fillStyle=ld;
+  ctx.fillText('CRAZY DIAMONDS', lx+lw*0.5, ly+lh*0.72);
+  for (let i=1; i<=5; i++) {
+    ctx.strokeStyle='rgba(255,200,50,0.15)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(lx+6,ly+lh*0.83+i*lh*0.026); ctx.lineTo(lx+lw-6,ly+lh*0.83+i*lh*0.026); ctx.stroke();
+  }
 
-    const spin = () => {
-      if (spinning || COINS < bet) {
-        if (COINS < bet) { resultEl.style.color='#ff6b6b'; resultEl.textContent='Not enough coins!'; }
-        return;
-      }
-      spinning = true;
-      haptic('medium');
-      updateWallet(-bet, spinBtn);
-      resultEl.textContent = '';
+  // Coin tray
+  const tx=lx+lw*0.15, ty2=trayY+2, tw=lw*0.70, th=trayH-3;
+  rr(tx,ty2,tw,th,th*0.42);
+  const tg2=ctx.createLinearGradient(tx,ty2,tx,ty2+th);
+  tg2.addColorStop(0,'#444'); tg2.addColorStop(0.5,'#777'); tg2.addColorStop(1,'#333');
+  ctx.fillStyle=tg2; ctx.fill(); ctx.strokeStyle=gold(tx,ty2,tx+tw,ty2+th); ctx.lineWidth=2; ctx.stroke();
 
-      // Animate reels with staggered stops
-      const finalSymbols = [0,1,2].map(() => SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)]);
+  // Lever track
+  ctx.strokeStyle='#555'; ctx.lineWidth=2.5;
+  ctx.beginPath(); ctx.moveTo(levX,levPivY-8); ctx.lineTo(levX,levPivY+lpMax+8); ctx.stroke();
+  // Arm
+  const armBaseX=CX+CaW-G*0.4, armY=levPivY+ballR*0.22;
+  rr(armBaseX,armY-5,levX-armBaseX+5,10,5);
+  const armG=ctx.createLinearGradient(armBaseX,armY-5,levX,armY-5);
+  armG.addColorStop(0,'#555'); armG.addColorStop(0.4,'#eee'); armG.addColorStop(0.8,'#bbb'); armG.addColorStop(1,'#666');
+  ctx.fillStyle=armG; ctx.fill(); ctx.strokeStyle='#444'; ctx.lineWidth=1; ctx.stroke();
+  // Pivot
+  ctx.beginPath(); ctx.arc(levX,armY,10,0,Math.PI*2);
+  const pKg=ctx.createRadialGradient(levX-3,armY-3,0,levX,armY,10);
+  pKg.addColorStop(0,'#eee'); pKg.addColorStop(1,'#777');
+  ctx.fillStyle=pKg; ctx.fill(); ctx.strokeStyle='#444'; ctx.lineWidth=1.5; ctx.stroke();
+  // Rod
+  rr(levX-4.5,levPivY,9,lpMax+ballR*0.5,4.5);
+  const rodG=ctx.createLinearGradient(levX-5,0,levX+5,0);
+  rodG.addColorStop(0,'#555'); rodG.addColorStop(0.35,'#eee'); rodG.addColorStop(0.65,'#ccc'); rodG.addColorStop(1,'#555');
+  ctx.fillStyle=rodG; ctx.fill();
+  rr(levX-1.5,levPivY,3,lpMax+ballR*0.5,2);
+  ctx.fillStyle='rgba(255,255,255,0.36)'; ctx.fill();
+  // Ball
+  const ballG=ctx.createRadialGradient(levX-ballR*0.28,curBY-ballR*0.32,0,levX,curBY,ballR);
+  ballG.addColorStop(0,'#ff9999'); ballG.addColorStop(0.48,'#cc0000'); ballG.addColorStop(1,'#4d0000');
+  ctx.beginPath(); ctx.arc(levX,curBY,ballR,0,Math.PI*2);
+  ctx.fillStyle=ballG; ctx.fill(); ctx.strokeStyle='#2a0000'; ctx.lineWidth=2; ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(levX-ballR*0.26,curBY-ballR*0.30,ballR*0.27,ballR*0.17,-0.6,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,0.42)'; ctx.fill();
+};
 
-      // Apply weighted "near miss" feel — 30% chance reels 0 and 1 match
-      if (Math.random() < .3) finalSymbols[1] = finalSymbols[0];
+// ── Eval result ──
+const symAt = i => STRIP[(Math.round(reels[i].offset) % SL + SL) % SL];
 
-      [0,1,2].forEach((i) => {
-        const reel = document.getElementById(`sl-reel-${i}`);
-        let ticks = 0;
-        const maxTicks = 8 + i * 5;
-        const interval = setInterval(() => {
-          reel.textContent = SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
-          reel.style.filter = 'blur(2px)';
-          ticks++;
-          if (ticks >= maxTicks) {
-            clearInterval(interval);
-            reel.textContent = finalSymbols[i];
-            reel.style.filter = '';
-            reel.style.animation = 'cs-spin-blur .2s ease';
-            setTimeout(()=>reel.style.animation='', 200);
-            if (i === 2) {
-              // All reels stopped — evaluate
-              setTimeout(() => evalSpin(finalSymbols, spinBtn), 150);
-            }
-          }
-        }, 80);
+const evalResult = () => {
+  const s = [symAt(0), symAt(1), symAt(2)];
+  const key = s.join('|');
+  let mult = 0;
+  if (PAYS[key]) { mult = PAYS[key]; }
+  else if (s[0]==='CHERRY' && s[1]==='CHERRY') { mult = 4; }
+  if (mult > 0) {
+    const prize = BET * mult;
+    winAmount = prize; credits += prize;
+    _addCoins(prize); updateWallet(0, null);
+    resultMsg = '+' + prize;
+    resultCol = mult>=50?'#ff44ff':mult>=20?'#00ffcc':'#ffd700';
+    haptic('success'); spawnCoins(prize);
+  } else {
+    winAmount = 0; resultMsg = 'No Win';
+    resultCol = 'rgba(255,180,80,0.50)'; haptic('light');
+  }
+};
+
+// ── Coin shower ──
+const spawnCoins = prize => {
+  const count = Math.min(55, Math.max(6, Math.floor(prize / BET * 6)));
+  const rect  = cv.getBoundingClientRect();
+  const trayCX = rect.left + rect.width * 0.5;
+  const trayCY = rect.top  + rect.height * 0.92;
+  for (let i = 0; i < count; i++) {
+    setTimeout(() => {
+      const coin = document.createElement('div');
+      const sz = 14 + Math.random() * 10;
+      const sx2 = trayCX + (Math.random()-0.5)*60;
+      coin.style.cssText = 'position:fixed;left:'+sx2+'px;top:'+trayCY+'px;width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:radial-gradient(circle at 38% 36%,#ffe066,#cc8800,#7a4a00);border:1.5px solid #aa7700;box-shadow:0 0 5px rgba(255,200,0,0.6);pointer-events:all;cursor:pointer;z-index:9999;';
+      coinLayer.appendChild(coin);
+      let vx=(Math.random()-0.5)*11, vy=-(9+Math.random()*13), cx2=sx2, cy2=trayCY, life=0, collected=false;
+      coin.addEventListener('pointerdown', e => {
+        e.stopPropagation(); if (collected) return; collected=true;
+        credits+=Math.ceil(BET*0.1); _addCoins(Math.ceil(BET*0.1)); updateWallet(0,null); haptic('light');
+        coin.style.opacity='0'; coin.style.transform='scale(1.6)'; coin.style.transition='all .25s';
+        setTimeout(()=>coin.remove(),270);
       });
-    };
+      const anim = () => {
+        if (collected||!coinLayer.contains(coin)) return;
+        life++; vy+=0.55; cy2+=vy; cx2+=vx; vx*=0.97;
+        coin.style.left=cx2+'px'; coin.style.top=cy2+'px';
+        if (life>110) coin.style.opacity=Math.max(0,1-(life-110)/50)+'';
+        if (life>160) { coin.remove(); return; }
+        requestAnimationFrame(anim);
+      };
+      requestAnimationFrame(anim);
+    }, i*52+Math.random()*68);
+  }
+};
 
-    const evalSpin = (syms, refEl) => {
-      let mult = 0;
-      const key3 = syms.join('');
-      const key2a = syms[0] === syms[1] ? syms[0]+syms[0] : null;
-      const key2b = syms[1] === syms[2] ? syms[1]+syms[1] : null;
-
-      if (PAYS[key3]) mult = PAYS[key3];
-      else if (key2a && PAYS[key2a]) mult = PAYS[key2a];
-      else if (key2b && PAYS[key2b]) mult = PAYS[key2b];
-
-      if (mult > 0) {
-        const prize = bet * mult;
-        updateWallet(prize, refEl);
-        resultEl.style.color = '#ffd700';
-        resultEl.textContent = `🏆 ×${mult}  +${prize} coins!`;
-        resultEl.style.animation = 'cs-win .5s ease';
-        setTimeout(()=>resultEl.style.animation='', 500);
-        haptic('success');
-        // Flash reels gold
-        [0,1,2].forEach(i => {
-          const r = document.getElementById(`sl-reel-${i}`);
-          r.style.background = 'rgba(255,215,0,.18)';
-          r.style.boxShadow  = '0 0 20px rgba(255,215,0,.6)';
-          setTimeout(()=>{ r.style.background='rgba(255,255,255,.04)'; r.style.boxShadow=''; }, 1200);
-        });
+// ── Animation loop ──
+const SPSPD = 24;
+const animLoop = ts => {
+  flashT = ts * 0.001;
+  if (spinning) {
+    let allDone = true;
+    reels.forEach(r => {
+      if (r.stopped) return; allDone = false;
+      if (r.targetOffset < 0) {
+        r.speed = Math.min(SPSPD, r.speed+2.2);
+        r.offset = (r.offset + r.speed/60) % SL;
       } else {
-        resultEl.style.color = 'rgba(255,255,255,.3)';
-        resultEl.textContent = 'No match. Try again.';
-        haptic('light');
+        const dist = ((r.targetOffset - r.offset) % SL + SL) % SL;
+        if (dist < 0.06) { r.offset=r.targetOffset%SL; r.stopped=true; r.speed=0; haptic('light'); }
+        else { r.offset=(r.offset+Math.max(0.28,Math.min(r.speed,dist*5+0.4))/60)%SL; }
       }
-      spinning = false;
-    };
+    });
+    if (allDone) { spinning=false; evalResult(); }
+  }
+  if (!leverDragging && leverY > 0) {
+    leverVel += (-leverY*0.32 - leverVel*0.22);
+    leverY = Math.max(0, leverY + leverVel*0.09);
+    if (leverY<0.008 && Math.abs(leverVel)<0.01) { leverY=0; leverVel=0; }
+  }
+  resize();
+  draw();
+  rafId = requestAnimationFrame(animLoop);
+};
+requestAnimationFrame(() => requestAnimationFrame(() => { rafId = requestAnimationFrame(animLoop); }));
 
-    spinBtn.addEventListener('click', spin);
-    spinBtn.addEventListener('touchstart', ()=>spinBtn.style.transform='scale(.95)', {passive:true});
-    spinBtn.addEventListener('touchend', ()=>spinBtn.style.transform='', {passive:true});
+// ── Input ──
+const getPos = e => {
+  const rect = cv.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+  return { x:(src.clientX-rect.left)*(cv.width/rect.width), y:(src.clientY-rect.top)*(cv.height/rect.height), sY:src.clientY };
+};
+
+const onBall = p => {
+  const W=cv.width, H=cv.height;
+  const G=W*0.050, CX=W*0.038, CaW=W*0.920, CaH=H*0.970;
+  const reelY2=(H*0.010+G)+CaH*0.158+CaH*0.122, reelH2=CaH*0.268;
+  const levX2=CX+CaW+W*0.015, levPivY2=reelY2+reelH2*0.22;
+  const lpMax2=(reelH2*1.04)*0.84, ballR2=W*0.046;
+  return Math.hypot(p.x-levX2, p.y-(levPivY2+leverY*lpMax2)) < ballR2+20;
+};
+
+const onCoin = p => {
+  const W=cv.width, H=cv.height;
+  const G=W*0.050, iX2=W*0.038+G, iW2=W*0.920-G*2;
+  const CaH=H*0.970, reelY2=(H*0.010+G)+CaH*0.158+CaH*0.122, reelH2=CaH*0.268;
+  const midY2=reelY2+reelH2, midH2=CaH*0.108;
+  const mpx=iX2+1, mpy=midY2, mpw=iW2-2, mph=midH2-2;
+  const cbx=mpx+mpw*0.54, cby=mpy+mph*0.10, cbw=mpw*0.43, cbh=mph*0.80;
+  return p.x>=cbx&&p.x<=cbx+cbw&&p.y>=cby&&p.y<=cby+cbh;
+};
+
+const insertCoin = () => {
+  if (spinning) return;
+  if (coinInserted) { resultMsg='Coin ready!'; resultCol='#ffd700'; return; }
+  if (credits < BET) { resultMsg='Need '+BET+'!'; resultCol='#ff6b6b'; return; }
+  coinInserted=true; winAmount=0; resultMsg='Pull lever!'; resultCol='#ffd700'; haptic('light');
+};
+
+const triggerSpin = () => {
+  if (spinning||!coinInserted) { if(!coinInserted){resultMsg='Insert coin!';resultCol='#ff9900';} return; }
+  credits-=BET; _addCoins(-BET); updateWallet(0,null);
+  coinInserted=false; spinning=true; resultMsg=''; winAmount=0;
+  const s0=Math.floor(Math.random()*SL);
+  let s1=Math.floor(Math.random()*SL);
+  if(Math.random()<0.70&&STRIP[s1]===STRIP[s0]){let attempts=0;while(STRIP[s1]===STRIP[s0]&&attempts++<30)s1=Math.floor(Math.random()*SL);}
+  let s2=Math.floor(Math.random()*SL);
+  if(Math.random()<0.70&&STRIP[s2]===STRIP[s1]){let attempts=0;while(STRIP[s2]===STRIP[s1]&&attempts++<30)s2=Math.floor(Math.random()*SL);}
+  reels.forEach((r,i)=>{r.stopped=false;r.speed=0;r.targetOffset=-1;setTimeout(()=>{r.targetOffset=[s0,s1,s2][i];},1300+i*950);});
+  haptic('medium');
+};
+
+cv.addEventListener('touchstart',e=>{e.preventDefault();const p=getPos(e);if(onBall(p)){leverDragging=true;leverDragStartY=p.sY;leverDragStartVal=leverY;leverVel=0;}else if(onCoin(p))insertCoin();},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();if(!leverDragging)return;const p=getPos(e);const dy=(p.sY-leverDragStartY)/(((cv.height*0.970*0.268*1.04)*0.84)*(cv.getBoundingClientRect().height/cv.height));leverY=Math.max(0,Math.min(1,leverDragStartVal+dy));},{passive:false});
+cv.addEventListener('touchend',e=>{e.preventDefault();if(leverDragging){leverDragging=false;if(leverY>=0.62&&!spinning)triggerSpin();}},{passive:false});
+cv.addEventListener('mousedown',e=>{const p=getPos(e);if(onBall(p)){leverDragging=true;leverDragStartY=p.sY;leverDragStartVal=leverY;leverVel=0;}else if(onCoin(p))insertCoin();});
+cv.addEventListener('mousemove',e=>{if(!leverDragging)return;const p=getPos(e);const dy=(p.sY-leverDragStartY)/(((cv.height*0.970*0.268*1.04)*0.84)*(cv.getBoundingClientRect().height/cv.height));leverY=Math.max(0,Math.min(1,leverDragStartVal+dy));});
+cv.addEventListener('mouseup',e=>{if(leverDragging){leverDragging=false;if(leverY>=0.62&&!spinning)triggerSpin();}});
+
+wrap._slotCleanup = () => { cancelAnimationFrame(rafId); coinLayer.remove(); };
+```
+
+};
+
+/* ════ HI-LO ════ */
+const buildHiLo = wrap => {
+const SUITS=[‘♠’,‘♥’,‘♦’,‘♣’],RANKS=[‘A’,‘2’,‘3’,‘4’,‘5’,‘6’,‘7’,‘8’,‘9’,‘10’,‘J’,‘Q’,‘K’];
+const VALUES={A:1,‘2’:2,‘3’:3,‘4’:4,‘5’:5,‘6’:6,‘7’:7,‘8’:8,‘9’:9,‘10’:10,J:11,Q:12,K:13};
+const SCOL={‘♠’:’#111’,‘♣’:’#111’,‘♥’:’#cc0000’,‘♦’:’#cc0000’};
+let deck=[],cur=null,streak=0,bet=10,busy=false;
+const mkDeck=()=>{deck=[];SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s,v:VALUES[r]})));for(let i=deck.length-1;i>0;i–){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}};
+const draw=()=>deck.length?deck.pop():(mkDeck(),deck.pop());
+const cHTML=(c,hidden)=>hidden?`<div style="width:90px;height:130px;border-radius:14px;background:linear-gradient(135deg,#1a1260,#0a0830);border:2px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:2rem;">🂠</div>`
+:`<div style="width:90px;height:130px;border-radius:14px;background:linear-gradient(135deg,#fff,#f0f0f0);border:2px solid rgba(0,0,0,.1);display:flex;flex-direction:column;padding:8px;color:${SCOL[c.s]};animation:cs-deal .3s both;"><div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;line-height:1;">${c.r}<br><span style="font-size:1.2rem;">${c.s}</span></div><div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:2.2rem;">${c.s}</div><div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;line-height:1;align-self:flex-end;transform:rotate(180deg);">${c.r}<br><span style="font-size:1.2rem;">${c.s}</span></div></div>`;
+
+```
+const render=()=>{
+  wrap.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:10px;">
+    <div style="display:flex;align-items:center;gap:8px;"><div style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;">Streak</div><div id="hl-st" style="font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;color:#ffd700;min-width:30px;text-align:center;">${streak}</div>${streak>=3?'<div style="font-size:.7rem;color:#ffd700;">🔥</div>':''}</div>
+    <div style="display:flex;align-items:center;gap:14px;"><div id="hl-cur">${cHTML(cur,false)}</div><div style="font-size:2rem;color:rgba(255,255,255,.2);">→</div><div id="hl-nxt">${cHTML(null,true)}</div></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--dim);letter-spacing:.1em;">Current: <span style="color:var(--text);">${cur.r}${cur.s} (${cur.v})</span></div>
+    <div id="hl-res" style="font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;letter-spacing:.1em;min-height:26px;text-align:center;"></div>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:rgba(255,255,255,.25);text-align:center;">Streak bonus: ×${Math.max(1,streak)} on next win</div>
+    <div style="display:flex;gap:12px;" id="hl-btns">
+      <button id="hl-lo" style="font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#0033cc,#001a66);border:2px solid #4488ff;padding:16px 32px;border-radius:22px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 20px rgba(0,100,255,.4);">▼ Lower</button>
+      <button id="hl-hi" style="font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#cc0000,#660000);border:2px solid #ff4444;padding:16px 32px;border-radius:22px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 20px rgba(255,0,0,.4);">▲ Higher</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <button id="hl-bd" style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">−</button>
+      <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:.14em;">Bet</div><div id="hl-bet" style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;color:#ffd700;">${bet}</div></div>
+      <button id="hl-bu" style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">+</button>
+      ${streak>0?`<button id="hl-cash" style="font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#050508;background:#ffd700;border:none;padding:10px 20px;border-radius:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 0 16px rgba(255,215,0,.5);">Cash Out ×${streak}</button>`:''}
+    </div>
+  </div>`;
+  const setBet=v=>{bet=Math.max(5,Math.min(200,v));document.getElementById('hl-bet').textContent=bet;};
+  document.getElementById('hl-bd').onclick=()=>{haptic('light');setBet(bet-5);};
+  document.getElementById('hl-bu').onclick=()=>{haptic('light');setBet(bet+5);};
+  const guess=choice=>{
+    if(busy)return;if(_casinoCoins<bet){document.getElementById('hl-res').style.color='#ff6b6b';document.getElementById('hl-res').textContent='Not enough coins!';return;}
+    busy=true;updateWallet(-bet,document.getElementById('hl-btns'));haptic('medium');
+    const next=draw();document.getElementById('hl-nxt').innerHTML=cHTML(next,false);
+    setTimeout(()=>{
+      const res=document.getElementById('hl-res'),tie=next.v===cur.v,correct=!tie&&((choice==='hi'&&next.v>cur.v)||(choice==='lo'&&next.v<cur.v));
+      if(tie){res.style.color='#ffd700';res.textContent='🤝 Tie — bet returned!';updateWallet(bet,res);streak=0;haptic('light');}
+      else if(correct){streak++;const p=bet*Math.max(1,streak);updateWallet(p,res);res.style.color='#ffd700';res.textContent=`✓ Correct! +${p} (×${Math.max(1,streak)} streak)`;haptic('success');}
+      else{res.style.color='#ff6b6b';res.textContent=`✗ Wrong! ${next.r}${next.s} (${next.v})`;streak=0;haptic('heavy');}
+      cur=next;setTimeout(()=>{busy=false;render();},1200);
+    },400);
   };
+  document.getElementById('hl-hi').onclick=()=>guess('hi');
+  document.getElementById('hl-lo').onclick=()=>guess('lo');
+  const ce=document.getElementById('hl-cash');
+  if(ce)ce.onclick=()=>{haptic('success');const p=bet*streak;updateWallet(p,ce);streak=0;render();};
+};
+mkDeck();cur=draw();render();
+```
 
-  /* ════════════════════════════════════════
-     🃏 HI-LO
-  ════════════════════════════════════════ */
-  const buildHiLo = wrap => {
-    const SUITS  = ['♠','♥','♦','♣'];
-    const RANKS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-    const VALUES = { A:1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, J:11, Q:12, K:13 };
-    const SUIT_COLORS = { '♠':'#fff', '♣':'#fff', '♥':'#ff4444', '♦':'#ff4444' };
+};
 
-    let deck = [], currentCard = null, streak = 0, bet = 10, waiting = false;
+/* ════ BLACKJACK ════ */
+const buildBlackjack = wrap => {
+const SUITS=[‘♠’,‘♥’,‘♦’,‘♣’],RANKS=[‘A’,‘2’,‘3’,‘4’,‘5’,‘6’,‘7’,‘8’,‘9’,‘10’,‘J’,‘Q’,‘K’];
+const SCOL={‘♠’:’#111’,‘♣’:’#111’,‘♥’:’#cc0000’,‘♦’:’#cc0000’};
+let deck=[],ph=[],dh=[],bet=20,gs=‘idle’;
+const mkDeck=()=>{deck=[];SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s})));SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s})));for(let i=deck.length-1;i>0;i–){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}};
+const draw=()=>deck.length?deck.pop():(mkDeck(),deck.pop());
+const val=c=>[‘J’,‘Q’,‘K’].includes(c.r)?10:c.r===‘A’?11:parseInt(c.r);
+const hval=h=>{let t=h.reduce((s,c)=>s+val(c),0),a=h.filter(c=>c.r===‘A’).length;while(t>21&&a>0){t-=10;a–;}return t;};
+const cHTML=(c,fd)=>fd?`<div style="width:58px;height:86px;border-radius:10px;background:linear-gradient(135deg,#1a1260,#0a0830);border:2px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">🂠</div>`
+:`<div style="width:58px;height:86px;border-radius:10px;background:linear-gradient(135deg,#fff,#f0f0f0);border:2px solid rgba(0,0,0,.1);display:flex;flex-direction:column;padding:5px;color:${SCOL[c.s]};font-family:'Orbitron',sans-serif;flex-shrink:0;animation:cs-deal .25s both;"><div style="font-size:.65rem;font-weight:900;line-height:1.1;">${c.r}${c.s}</div><div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">${c.s}</div><div style="font-size:.65rem;font-weight:900;line-height:1.1;align-self:flex-end;transform:rotate(180deg);">${c.r}${c.s}</div></div>`;
+const handHTML=(h,hide2)=>`<div style="display:flex;gap:6px;flex-wrap:wrap;">${h.map((c,i)=>i===1&&hide2?cHTML(c,true):cHTML(c,false)).join('')}</div>`;
 
-    const mkDeck = () => {
-      deck = [];
-      SUITS.forEach(s => RANKS.forEach(r => deck.push({r,s,v:VALUES[r]})));
-      // Shuffle
-      for (let i = deck.length-1; i>0; i--) {
-        const j = Math.floor(Math.random()*(i+1));
-        [deck[i],deck[j]] = [deck[j],deck[i]];
-      }
-    };
-    const drawCard = () => deck.length ? deck.pop() : (mkDeck(), deck.pop());
-
-    const cardHTML = (card, hidden) => {
-      if (hidden) return `<div style="width:90px;height:130px;border-radius:14px;background:linear-gradient(135deg,#1a1260,#0a0830);border:2px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:2rem;">🂠</div>`;
-      const col = SUIT_COLORS[card.s];
-      return `<div style="width:90px;height:130px;border-radius:14px;background:linear-gradient(135deg,#fff,#f0f0f0);border:2px solid rgba(0,0,0,.1);display:flex;flex-direction:column;padding:8px;color:${col};animation:cs-deal .3s both;">
-        <div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;line-height:1;">${card.r}<br><span style="font-size:1.2rem;">${card.s}</span></div>
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:2.2rem;">${card.s}</div>
-        <div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;line-height:1;align-self:flex-end;transform:rotate(180deg);">${card.r}<br><span style="font-size:1.2rem;">${card.s}</span></div>
-      </div>`;
-    };
-
-    const render = () => {
-      wrap.innerHTML = '';
-      mkDeck();
-      currentCard = drawCard();
-      streak = 0;
-      waiting = false;
-      renderState();
-    };
-
-    const renderState = () => {
-      wrap.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:10px;">
-          <!-- Streak -->
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;">Streak</div>
-            <div id="hl-streak" style="font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;color:#ffd700;min-width:30px;text-align:center;">${streak}</div>
-            ${streak>=3?`<div style="font-size:.7rem;color:#ffd700;">🔥</div>`:''}
-          </div>
-
-          <!-- Cards row -->
-          <div style="display:flex;align-items:center;gap:14px;">
-            <div id="hl-card">${cardHTML(currentCard, false)}</div>
-            <div style="font-size:2rem;color:rgba(255,255,255,.2);">→</div>
-            <div id="hl-next">${cardHTML(null, true)}</div>
-          </div>
-
-          <!-- Card info -->
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--dim);letter-spacing:.1em;">
-            Current: <span style="color:var(--text);">${currentCard.r}${currentCard.s}</span> (value ${currentCard.v})
-          </div>
-
-          <!-- Result -->
-          <div id="hl-result" style="font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;letter-spacing:.1em;min-height:26px;text-align:center;"></div>
-
-          <!-- Multiplier info -->
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;color:rgba(255,255,255,.25);text-align:center;">
-            Streak bonus: ×${Math.max(1,streak)} on next win
-          </div>
-
-          <!-- Hi / Lo buttons -->
-          <div style="display:flex;gap:12px;" id="hl-btns">
-            <button id="hl-lo" style="font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#0033cc,#001a66);border:2px solid #4488ff;padding:16px 32px;border-radius:22px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 20px rgba(0,100,255,.4);">▼ Lower</button>
-            <button id="hl-hi" style="font-family:'Orbitron',sans-serif;font-size:.85rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#cc0000,#660000);border:2px solid #ff4444;padding:16px 32px;border-radius:22px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 20px rgba(255,0,0,.4);">▲ Higher</button>
-          </div>
-
-          <!-- Bet + Cashout -->
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
-            <button id="hl-bd" style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">−</button>
-            <div style="text-align:center;">
-              <div style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:.14em;">Bet</div>
-              <div id="hl-bet" style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;color:#ffd700;">${bet}</div>
-            </div>
-            <button id="hl-bu" style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">+</button>
-            ${streak>0?`<button id="hl-cash" style="font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#050508;background:#ffd700;border:none;padding:10px 20px;border-radius:16px;cursor:pointer;-webkit-tap-highlight-color:transparent;box-shadow:0 0 16px rgba(255,215,0,.5);">Cash Out ×${streak}</button>`:''}
-          </div>
-        </div>`;
-
-      const setBet = v => { bet=Math.max(5,Math.min(200,v)); document.getElementById('hl-bet').textContent=bet; };
-      document.getElementById('hl-bd').onclick = ()=>{ haptic('light'); setBet(bet-5); };
-      document.getElementById('hl-bu').onclick = ()=>{ haptic('light'); setBet(bet+5); };
-
-      const guess = choice => {
-        if (waiting) return;
-        if (COINS < bet) { document.getElementById('hl-result').style.color='#ff6b6b'; document.getElementById('hl-result').textContent='Not enough coins!'; return; }
-        waiting = true;
-        updateWallet(-bet, document.getElementById('hl-btns'));
-        haptic('medium');
-
-        const nextCard = drawCard();
-        document.getElementById('hl-next').innerHTML = cardHTML(nextCard, false);
-
-        setTimeout(() => {
-          const resultEl = document.getElementById('hl-result');
-          const isHigher = nextCard.v > currentCard.v;
-          const isLower  = nextCard.v < currentCard.v;
-          const isTie    = nextCard.v === currentCard.v;
-          const correct  = (!isTie) && ((choice==='hi' && isHigher) || (choice==='lo' && isLower));
-
-          if (isTie) {
-            resultEl.style.color='#ffd700'; resultEl.textContent='🤝 Tie — bet returned!';
-            updateWallet(bet, resultEl); streak=0; haptic('light');
-          } else if (correct) {
-            streak++;
-            const prize = bet * Math.max(1, streak);
-            updateWallet(prize, resultEl);
-            resultEl.style.color='#ffd700'; resultEl.textContent=`✓ Correct! +${prize} (×${Math.max(1,streak)} streak)`;
-            haptic('success');
-          } else {
-            resultEl.style.color='#ff6b6b'; resultEl.textContent=`✗ Wrong! ${nextCard.r}${nextCard.s} (${nextCard.v})`;
-            streak=0; haptic('heavy');
-          }
-
-          currentCard = nextCard;
-          setTimeout(() => { waiting=false; renderState(); }, 1200);
-        }, 400);
-      };
-
-      document.getElementById('hl-hi').onclick = ()=>guess('hi');
-      document.getElementById('hl-lo').onclick = ()=>guess('lo');
-      const cashEl = document.getElementById('hl-cash');
-      if (cashEl) cashEl.onclick = ()=>{
-        haptic('success');
-        const prize = bet * streak;
-        updateWallet(prize, cashEl);
-        streak=0; renderState();
-      };
-    };
-
-    render();
+```
+const idle=()=>{
+  wrap.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:22px;padding-top:20px;"><div style="font-size:4rem;">♠️</div><div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;color:var(--cyan);letter-spacing:.1em;">BLACKJACK</div><div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--dim);text-align:center;line-height:1.7;max-width:260px;">Get closer to 21 than the dealer.<br>Dealer stands on 17. Blackjack pays 1.5×.</div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button id="bj-bd" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">−</button>
+      <div style="text-align:center;"><div style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:.14em;">Bet</div><div id="bj-bet" style="font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:900;color:#ffd700;">${bet}</div></div>
+      <button id="bj-bu" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">+</button>
+    </div>
+    <button id="bj-deal" style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#050508;background:linear-gradient(135deg,#00ffcc,#00aa88);border:none;padding:18px 52px;border-radius:50px;cursor:pointer;box-shadow:0 4px 24px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent;">Deal</button>
+    <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:rgba(255,255,255,.15);text-align:center;">Blackjack pays ×1.5 · Dealer stands on 17</div>
+  </div>`;
+  const sb=v=>{bet=Math.max(5,Math.min(500,v));document.getElementById('bj-bet').textContent=bet;};
+  document.getElementById('bj-bd').onclick=()=>{haptic('light');sb(bet-5);};
+  document.getElementById('bj-bu').onclick=()=>{haptic('light');sb(bet+5);};
+  document.getElementById('bj-deal').onclick=()=>{
+    if(_casinoCoins<bet)return;haptic('medium');updateWallet(-bet,document.getElementById('bj-deal'));
+    ph=[draw(),draw()];dh=[draw(),draw()];gs='playing';playing();
   };
+};
 
-  /* ════════════════════════════════════════
-     ♠ BLACKJACK
-  ════════════════════════════════════════ */
-  const buildBlackjack = wrap => {
-    const SUITS  = ['♠','♥','♦','♣'];
-    const RANKS  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-    const SUIT_COLORS = { '♠':'#111', '♣':'#111', '♥':'#cc0000', '♦':'#cc0000' };
-
-    let deck=[], playerHand=[], dealerHand=[], bet=20, gameState='idle'; // idle | playing | over
-
-    const mkDeck=()=>{
-      deck=[];
-      SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s})));
-      SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s}))); // double deck
-      for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}
-    };
-    const drawCard=()=>deck.length?deck.pop():(mkDeck(),deck.pop());
-
-    const cardVal=(card)=>{
-      if(['J','Q','K'].includes(card.r)) return 10;
-      if(card.r==='A') return 11;
-      return parseInt(card.r);
-    };
-    const handVal=(hand)=>{
-      let total=hand.reduce((s,c)=>s+cardVal(c),0);
-      let aces=hand.filter(c=>c.r==='A').length;
-      while(total>21&&aces>0){total-=10;aces--;}
-      return total;
-    };
-    const isBust=hand=>handVal(hand)>21;
-    const isBlackjack=hand=>hand.length===2&&handVal(hand)===21;
-
-    const cardHTML=(card,facedown=false)=>{
-      if(facedown) return `<div style="width:58px;height:86px;border-radius:10px;background:linear-gradient(135deg,#1a1260,#0a0830);border:2px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">🂠</div>`;
-      const col=SUIT_COLORS[card.s];
-      return `<div style="width:58px;height:86px;border-radius:10px;background:linear-gradient(135deg,#fff,#f0f0f0);border:2px solid rgba(0,0,0,.1);display:flex;flex-direction:column;padding:5px;color:${col};font-family:'Orbitron',sans-serif;flex-shrink:0;animation:cs-deal .25s both;">
-        <div style="font-size:.65rem;font-weight:900;line-height:1.1;">${card.r}${card.s}</div>
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">${card.s}</div>
-        <div style="font-size:.65rem;font-weight:900;line-height:1.1;align-self:flex-end;transform:rotate(180deg);">${card.r}${card.s}</div>
-      </div>`;
-    };
-
-    const handHTML=(hand,hideSecond=false)=>
-      `<div style="display:flex;gap:6px;flex-wrap:wrap;">${hand.map((c,i)=>i===1&&hideSecond?cardHTML(c,true):cardHTML(c)).join('')}</div>`;
-
-    mkDeck();
-
-    const renderIdle=()=>{
-      wrap.innerHTML=`
-        <div style="display:flex;flex-direction:column;align-items:center;gap:22px;padding-top:20px;">
-          <div style="font-size:4rem;">♠️</div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;color:var(--cyan);letter-spacing:.1em;">BLACKJACK</div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:var(--dim);text-align:center;line-height:1.7;max-width:260px;">Get closer to 21 than the dealer.<br>Dealer stands on 17.<br>Blackjack pays 1.5×.</div>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <button id="bj-bd" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">−</button>
-            <div style="text-align:center;">
-              <div style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:.14em;">Bet</div>
-              <div id="bj-bet" style="font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:900;color:#ffd700;">${bet}</div>
-            </div>
-            <button id="bj-bu" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-size:1.2rem;cursor:pointer;-webkit-tap-highlight-color:transparent;">+</button>
-          </div>
-          <button id="bj-deal" style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#050508;background:linear-gradient(135deg,#00ffcc,#00aa88);border:none;padding:18px 52px;border-radius:50px;cursor:pointer;box-shadow:0 4px 24px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent;">Deal</button>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:rgba(255,255,255,.15);text-align:center;">Blackjack pays ×1.5 · Dealer stands on 17</div>
-        </div>`;
-      const setBet=v=>{bet=Math.max(5,Math.min(500,v));document.getElementById('bj-bet').textContent=bet;};
-      document.getElementById('bj-bd').onclick=()=>{haptic('light');setBet(bet-5);};
-      document.getElementById('bj-bu').onclick=()=>{haptic('light');setBet(bet+5);};
-      document.getElementById('bj-deal').onclick=()=>{
-        if(COINS<bet){return;}
-        haptic('medium');
-        updateWallet(-bet,document.getElementById('bj-deal'));
-        playerHand=[drawCard(),drawCard()];
-        dealerHand=[drawCard(),drawCard()];
-        gameState='playing';
-        renderPlaying();
-      };
-    };
-
-    const renderPlaying=(revealDealer=false)=>{
-      const pVal=handVal(playerHand);
-      const dVal=handVal(dealerHand);
-      const bust=isBust(playerHand);
-      const bjack=isBlackjack(playerHand);
-      wrap.innerHTML=`
-        <div style="display:flex;flex-direction:column;gap:16px;padding-top:8px;">
-          <!-- Dealer -->
-          <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px 16px;">
-            <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">
-              Dealer ${revealDealer?`— ${dVal}`:''}
-            </div>
-            ${handHTML(dealerHand,!revealDealer)}
-          </div>
-          <!-- Player -->
-          <div style="background:rgba(0,255,204,.04);border:1px solid rgba(0,255,204,.12);border-radius:18px;padding:14px 16px;">
-            <div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">
-              You — <span style="color:${pVal>21?'#ff6b6b':pVal===21?'#ffd700':'var(--cyan)'}">${pVal}</span>
-            </div>
-            ${handHTML(playerHand)}
-          </div>
-          <!-- Result -->
-          <div id="bj-result" style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;letter-spacing:.1em;text-align:center;min-height:28px;"></div>
-          <!-- Buttons -->
-          <div id="bj-actions" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-            ${bust||bjack||revealDealer?
-              `<button id="bj-again" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#050508;background:linear-gradient(135deg,#00ffcc,#00aa88);border:none;padding:16px 40px;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent;">Play Again</button>`
-            :
-              `<button id="bj-hit" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#e53935,#8b0000);border:none;padding:14px 28px;border-radius:20px;cursor:pointer;box-shadow:0 4px 16px rgba(200,0,0,.4);-webkit-tap-highlight-color:transparent;">Hit</button>
-               <button id="bj-stand" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#1565c0,#0d47a1);border:none;padding:14px 28px;border-radius:20px;cursor:pointer;box-shadow:0 4px 16px rgba(0,80,200,.4);-webkit-tap-highlight-color:transparent;">Stand</button>
-               ${playerHand.length===2&&COINS>=bet?`<button id="bj-double" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#6a0dad,#3a006d);border:none;padding:14px 28px;border-radius:20px;cursor:pointer;box-shadow:0 4px 16px rgba(100,0,200,.4);-webkit-tap-highlight-color:transparent;">Double</button>`:''}`
-            }
-          </div>
-        </div>`;
-
-      // Evaluate if bust or BJ
-      const resultEl=document.getElementById('bj-result');
-      if(bust){
-        resultEl.style.color='#ff6b6b';resultEl.textContent='💥 Bust! Dealer wins.';
-        haptic('heavy');
-      } else if(bjack){
-        const prize=Math.round(bet*1.5)+bet;
-        updateWallet(prize,resultEl);
-        resultEl.style.color='#ffd700';resultEl.textContent=`🃏 Blackjack! +${prize}`;
-        haptic('success');
-      } else if(revealDealer){
-        resolveRound(resultEl);
+const playing=(rev=false)=>{
+  const pv=hval(ph),dv=hval(dh),bust=pv>21,bj=ph.length===2&&pv===21;
+  wrap.innerHTML=`<div style="display:flex;flex-direction:column;gap:16px;padding-top:8px;">
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px 16px;"><div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">Dealer ${rev?'— '+dv:''}</div>${handHTML(dh,!rev)}</div>
+    <div style="background:rgba(0,255,204,.04);border:1px solid rgba(0,255,204,.12);border-radius:18px;padding:14px 16px;"><div style="font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">You — <span style="color:${pv>21?'#ff6b6b':pv===21?'#ffd700':'var(--cyan)'}">${pv}</span></div>${handHTML(ph,false)}</div>
+    <div id="bj-res" style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;letter-spacing:.1em;text-align:center;min-height:28px;"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      ${bust||bj||rev
+        ?`<button id="bj-ag" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#050508;background:linear-gradient(135deg,#00ffcc,#00aa88);border:none;padding:16px 40px;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent;">Play Again</button>`
+        :`<button id="bj-hit" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#e53935,#8b0000);border:none;padding:14px 28px;border-radius:20px;cursor:pointer;box-shadow:0 4px 16px rgba(200,0,0,.4);-webkit-tap-highlight-color:transparent;">Hit</button>
+         <button id="bj-st" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#1565c0,#0d47a1);border:none;padding:14px 28px;border-radius:20px;cursor:pointer;box-shadow:0 4px 16px rgba(0,80,200,.4);-webkit-tap-highlight-color:transparent;">Stand</button>
+         ${ph.length===2&&_casinoCoins>=bet?`<button id="bj-dbl" style="font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#6a0dad,#3a006d);border:none;padding:14px 28px;border-radius:20px;cursor:pointer;box-shadow:0 4px 16px rgba(100,0,200,.4);-webkit-tap-highlight-color:transparent;">Double</button>`:''}`
       }
+    </div>
+  </div>`;
+  const re=document.getElementById('bj-res');
+  if(bust){re.style.color='#ff6b6b';re.textContent='💥 Bust! Dealer wins.';haptic('heavy');}
+  else if(bj){const p=Math.round(bet*1.5)+bet;updateWallet(p,re);re.style.color='#ffd700';re.textContent=`🃏 Blackjack! +${p}`;haptic('success');}
+  else if(rev){
+    if(hval(dh)>21||pv>dv){const p=bet*2;updateWallet(p,re);re.style.color='#00ffcc';re.textContent=`🏆 You win! +${p}`;haptic('success');}
+    else if(pv===dv){updateWallet(bet,re);re.style.color='#ffd700';re.textContent='🤝 Push — bet returned';haptic('light');}
+    else{re.style.color='#ff6b6b';re.textContent=`💀 Dealer wins (${hval(dh)} vs ${pv})`;haptic('heavy');}
+  }
+  const h=document.getElementById('bj-hit'),s=document.getElementById('bj-st'),d=document.getElementById('bj-dbl'),a=document.getElementById('bj-ag');
+  if(h)h.onclick=()=>{haptic('medium');ph.push(draw());if(hval(ph)>21)playing(true);else playing(false);};
+  if(s)s.onclick=()=>{haptic('medium');while(hval(dh)<17)dh.push(draw());playing(true);};
+  if(d)d.onclick=()=>{haptic('medium');updateWallet(-bet,d);bet*=2;ph.push(draw());while(hval(dh)<17)dh.push(draw());playing(true);};
+  if(a)a.onclick=()=>{gs='idle';bet=Math.min(bet,Math.max(_casinoCoins,5));idle();};
+};
 
-      // Wire buttons
-      const hitBtn=document.getElementById('bj-hit');
-      const standBtn=document.getElementById('bj-stand');
-      const doubleBtn=document.getElementById('bj-double');
-      const againBtn=document.getElementById('bj-again');
+mkDeck();idle();
+```
 
-      if(hitBtn) hitBtn.onclick=()=>{
-        haptic('medium'); playerHand.push(drawCard());
-        if(isBust(playerHand)){renderPlaying(true);}else{renderPlaying(false);}
-      };
-      if(standBtn) standBtn.onclick=()=>{ haptic('medium'); dealerPlay(); };
-      if(doubleBtn) doubleBtn.onclick=()=>{
-        haptic('medium');
-        updateWallet(-bet,doubleBtn);
-        bet*=2;
-        playerHand.push(drawCard());
-        dealerPlay();
-      };
-      if(againBtn) againBtn.onclick=()=>{ gameState='idle'; bet=Math.min(bet,COINS>0?COINS:20); renderIdle(); };
-    };
+};
 
-    const dealerPlay=()=>{
-      // Dealer draws until ≥17
-      while(handVal(dealerHand)<17){dealerHand.push(drawCard());}
-      renderPlaying(true);
-    };
-
-    const resolveRound=(resultEl)=>{
-      const pVal=handVal(playerHand);
-      const dVal=handVal(dealerHand);
-      if(isBust(dealerHand)||pVal>dVal){
-        const prize=bet*2;
-        updateWallet(prize,resultEl);
-        resultEl.style.color='#00ffcc';resultEl.textContent=`🏆 You win! +${prize}`;
-        haptic('success');
-      } else if(pVal===dVal){
-        updateWallet(bet,resultEl);
-        resultEl.style.color='#ffd700';resultEl.textContent='🤝 Push — bet returned';
-        haptic('light');
-      } else {
-        resultEl.style.color='#ff6b6b';resultEl.textContent=`💀 Dealer wins (${dVal} vs ${pVal})`;
-        haptic('heavy');
-      }
-    };
-
-    renderIdle();
-  };
-
-  /* ── Init ── */
-  return () => { saveCoins(); }; // save on app close
+/* ── Init ── */
+return () => { _saveCoins(); };
 }
