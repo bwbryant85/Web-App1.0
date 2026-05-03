@@ -380,12 +380,12 @@ function initCasino() {
     };
 
     const STRIP = [
-      'CHERRY','BLANK','BAR',      'BLANK',
-      'BELL',  'BLANK','TWO_BAR',  'BLANK',
-      'CHERRY','BLANK','BAR',      'BLANK',
-      'BELL',  'BLANK','THREE_BAR','BLANK',
-      'DIAMOND','BLANK','CHERRY',  'BLANK',
-      'SEVEN', 'BLANK','TWO_BAR',  'BLANK'
+      'CHERRY','BAR',      'BELL',    'TWO_BAR',
+      'CHERRY','THREE_BAR','BAR',     'BELL',
+      'DIAMOND','CHERRY',  'BAR',     'TWO_BAR',
+      'BELL',  'CHERRY',  'THREE_BAR','BAR',
+      'CHERRY','TWO_BAR', 'BELL',     'DIAMOND',
+      'SEVEN', 'BAR',     'CHERRY',   'BELL'
     ];
     const SL = STRIP.length;
 
@@ -831,8 +831,8 @@ function initCasino() {
       const CX=W*0.028, CY=H*0.008;
       const CaW=W*0.880, CaH=H*0.975;
       const iX=CX+G, iW=CaW-G*2;
-      const signY=CY+G, signH=CaH*0.155;
-      const payY=signY+signH, payH=CaH*0.118;
+      const signY=CY+G, signH=CaH*0.108;
+      const payY=signY+signH, payH=CaH*0.165;
       const reelY=payY+payH, reelH=CaH*0.270;
       const midY=reelY+reelH, midH=CaH*0.108;
       const lowY=midY+midH, lowH=CaH*0.240;
@@ -916,18 +916,18 @@ function initCasino() {
       });
 
       /* sign text */
-      ctx.save(); ctx.translate(sx+sw2*0.5,sy+sh*0.52); drawSym('DIAMOND',sh*0.38,1); ctx.restore();
+      ctx.save(); ctx.translate(sx+sw2*0.5,sy+sh*0.50); drawSym('DIAMOND',sh*0.32,1); ctx.restore();
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.font='900 '+Math.round(sh*0.21)+'px Arial,sans-serif';
-      ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.04; ctx.strokeText('CRAZY',sx+sw2*0.5,sy+sh*0.52);
-      const sg1=ctx.createLinearGradient(sx,sy+sh*0.43,sx,sy+sh*0.61);
+      ctx.font='900 '+Math.round(sh*0.23)+'px Arial,sans-serif';
+      ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.04; ctx.strokeText('CRAZY',sx+sw2*0.5,sy+sh*0.46);
+      const sg1=ctx.createLinearGradient(sx,sy+sh*0.38,sx,sy+sh*0.54);
       sg1.addColorStop(0,'#fff0a0'); sg1.addColorStop(1,'#c89000'); ctx.fillStyle=sg1;
-      ctx.fillText('CRAZY',sx+sw2*0.5,sy+sh*0.52);
-      ctx.font='900 '+Math.round(sh*0.28)+'px Arial,sans-serif';
-      ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.05; ctx.strokeText('DIAMONDS',sx+sw2*0.5,sy+sh*0.79);
-      const sg2=ctx.createLinearGradient(sx,sy+sh*0.66,sx,sy+sh*0.90);
+      ctx.fillText('CRAZY',sx+sw2*0.5,sy+sh*0.46);
+      ctx.font='900 '+Math.round(sh*0.32)+'px Arial,sans-serif';
+      ctx.strokeStyle='#000'; ctx.lineWidth=sh*0.05; ctx.strokeText('DIAMONDS',sx+sw2*0.5,sy+sh*0.78);
+      const sg2=ctx.createLinearGradient(sx,sy+sh*0.64,sx,sy+sh*0.90);
       sg2.addColorStop(0,'#fff0a0'); sg2.addColorStop(1,'#c89000'); ctx.fillStyle=sg2;
-      ctx.fillText('DIAMONDS',sx+sw2*0.5,sy+sh*0.79);
+      ctx.fillText('DIAMONDS',sx+sw2*0.5,sy+sh*0.78);
 
       /* ── paytable ── */
       const px2=iX+1,py2=payY,pw2=iW-2,ph2=payH-2;
@@ -935,21 +935,43 @@ function initCasino() {
       rr(px2,py2,pw2,ph2,3); ctx.fillStyle='#f0ead8'; ctx.fill();
       rr(px2,py2,pw2,ph2,3); ctx.strokeStyle=gold(px2,py2,px2+pw2,py2+ph2); ctx.lineWidth=2; ctx.stroke();
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.font='900 '+Math.round(ph2*0.23)+'px Arial,sans-serif'; ctx.fillStyle='#000080';
-      ctx.fillText('WINS',px2+pw2*0.5,py2+ph2*0.17);
-      const entries=[['Diam x3','x50'],['3xBAR','x30'],['2xBAR','x20'],['BAR x3','x15'],['Bell x3','x12'],['Cherry x3','x10']];
-      const mw2=pw2*0.27,mh2=ph2*0.31;
-      entries.forEach(([k,v],i)=>{
-        const ex=px2+pw2*0.04+(i%3)*(mw2+pw2*0.025),ey=py2+ph2*0.33+Math.floor(i/3)*(mh2+ph2*0.04);
-        rr(ex+1,ey+2,mw2,mh2,2); ctx.fillStyle='rgba(0,0,0,.2)'; ctx.fill();
-        rr(ex,ey,mw2,mh2,2);
-        const ebg=ctx.createLinearGradient(ex,ey,ex,ey+mh2);
-        ebg.addColorStop(0,'#fff8e8'); ebg.addColorStop(1,'#e0d8b8');
-        ctx.fillStyle=ebg; ctx.fill(); ctx.strokeStyle='#aaa'; ctx.lineWidth=0.7; ctx.stroke();
-        ctx.textAlign='left'; ctx.font='600 '+Math.round(mh2*0.34)+'px Arial,sans-serif'; ctx.fillStyle='#222';
-        ctx.fillText(k,ex+2,ey+mh2*0.40);
-        ctx.textAlign='right'; ctx.font='900 '+Math.round(mh2*0.37)+'px Arial,sans-serif'; ctx.fillStyle='#880000';
-        ctx.fillText(v,ex+mw2-2,ey+mh2*0.62);
+      ctx.font='900 '+Math.round(ph2*0.14)+'px Arial,sans-serif'; ctx.fillStyle='#000080';
+      ctx.fillText('WINS',px2+pw2*0.5,py2+ph2*0.09);
+
+      /* 6 entries in 3 cols x 2 rows — symbol drawn left, multiplier right */
+      const payEntries=[
+        ['DIAMOND','x50'],['THREE_BAR','x30'],['TWO_BAR','x20'],
+        ['BAR','x15'],['BELL','x12'],['CHERRY','x10']
+      ];
+      const cols=3, rows=2;
+      const cellW=pw2/cols, cellH=(ph2*0.86)/rows;
+      const cellY0=py2+ph2*0.16;
+
+      payEntries.forEach(([sym2,mult],i)=>{
+        const col=i%cols, row=Math.floor(i/cols);
+        const cx3=px2+col*cellW, cy3=cellY0+row*cellH;
+        /* cell bg */
+        rr(cx3+2,cy3+2,cellW-4,cellH-4,3);
+        const cbg3=ctx.createLinearGradient(cx3,cy3,cx3,cy3+cellH);
+        cbg3.addColorStop(0,'#fffaf0'); cbg3.addColorStop(1,'#e8dfc8');
+        ctx.fillStyle=cbg3; ctx.fill();
+        /* cell border */
+        ctx.strokeStyle='rgba(160,140,100,0.4)'; ctx.lineWidth=0.8;
+        rr(cx3+2,cy3+2,cellW-4,cellH-4,3); ctx.stroke();
+
+        /* draw symbol in left portion of cell */
+        const symSize = cellH * 0.72;
+        const symCX = cx3 + cellW*0.28;
+        const symCY = cy3 + cellH*0.50;
+        ctx.save(); ctx.translate(symCX, symCY); drawSym(sym2, symSize, 1); ctx.restore();
+
+        /* multiplier text on right */
+        ctx.textAlign='right'; ctx.textBaseline='middle';
+        ctx.font='900 '+Math.round(cellH*0.36)+'px Arial,sans-serif';
+        ctx.fillStyle='#aa0000';
+        ctx.shadowColor='rgba(0,0,0,0.2)'; ctx.shadowBlur=2;
+        ctx.fillText(mult, cx3+cellW-5, cy3+cellH*0.52);
+        ctx.shadowBlur=0;
       });
 
       /* ── side panels ── */
