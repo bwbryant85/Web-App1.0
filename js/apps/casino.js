@@ -1440,149 +1440,348 @@ function initCasino() {
   };
 
   /* ════════════════════════════════════════════════════════════════
-     BLACKJACK  — 3-D felt table + flip cards
+     BLACKJACK  — redesigned to match screenshot style
   ════════════════════════════════════════════════════════════════ */
   const buildBlackjack = wrap => {
     const SUITS=['♠','♥','♦','♣'],RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-    const SCOL={'♠':'#1a1a2e','♣':'#1a1a2e','♥':'#aa0000','♦':'#aa0000'};
-    let deck=[],ph=[],dh=[],bet=20,gs='idle';
+    let deck=[],ph=[],dh=[],bet=25,gs='idle';
 
-    const mkDeck=()=>{deck=[];SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s})));SUITS.forEach(s=>RANKS.forEach(r=>deck.push({r,s})));for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}};
+    const mkDeck=()=>{deck=[];SUITS.forEach(s2=>RANKS.forEach(r=>deck.push({r,s:s2})));SUITS.forEach(s2=>RANKS.forEach(r=>deck.push({r,s:s2})));for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]];}};
     const drawCard=()=>deck.length?deck.pop():(mkDeck(),deck.pop());
     const val=c=>['J','Q','K'].includes(c.r)?10:c.r==='A'?11:parseInt(c.r);
-    const hval=h=>{let t=h.reduce((s,c)=>s+val(c),0),a=h.filter(c=>c.r==='A').length;while(t>21&&a>0){t-=10;a--;}return t;};
+    const hval=h=>{let t=h.reduce((a,c)=>a+val(c),0),ac=h.filter(c=>c.r==='A').length;while(t>21&&ac>0){t-=10;ac--;}return t;};
+    const isRed=c=>c.s==='♥'||c.s==='♦';
 
-    /* 3D card — same style as HiLo */
-    const cHTML = (c, faceDown, delay=0) => {
-      if(faceDown) return `
-        <div style="width:62px;height:90px;border-radius:10px;flex-shrink:0;perspective:500px;">
-          <div style="width:100%;height:100%;border-radius:10px;
-            background:linear-gradient(135deg,#1a1260,#0a0830,#1a1260);
-            border:1.5px solid rgba(255,255,255,.12);
-            box-shadow:3px 5px 14px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);
-            display:flex;align-items:center;justify-content:center;font-size:1.5rem;
-            background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.02) 0,rgba(255,255,255,.02) 1px,transparent 1px,transparent 6px);">
-            🂠
-          </div>
-        </div>`;
-      const isRed=c.s==='♥'||c.s==='♦';
-      return `
-        <div style="width:62px;height:90px;border-radius:10px;flex-shrink:0;perspective:500px;animation:cs-cardentry .35s ${delay}s both;">
-          <div style="width:100%;height:100%;border-radius:10px;
-            background:linear-gradient(160deg,#fff 0%,#f4f4f4 60%,#e8e8e8 100%);
-            border:1.5px solid rgba(0,0,0,.15);
-            box-shadow:3px 5px 14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.9);
-            display:flex;flex-direction:column;padding:5px;color:${SCOL[c.s]};">
-            <div style="font-family:'Orbitron',sans-serif;font-size:.68rem;font-weight:900;line-height:1.1;">${c.r}${c.s}</div>
-            <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">${c.s}</div>
-            <div style="font-family:'Orbitron',sans-serif;font-size:.68rem;font-weight:900;line-height:1.1;align-self:flex-end;transform:rotate(180deg);">${c.r}${c.s}</div>
-          </div>
-        </div>`;
-    };
+    /* inject styles once */
+    if(!document.getElementById('bj-styles')){
+      const st=document.createElement('style');
+      st.id='bj-styles';
+      st.textContent=`
+        @keyframes bj-slide-in {
+          from { opacity:0; transform: translateY(-28px) rotate(-6deg) scale(.88); }
+          to   { opacity:1; transform: translateY(0)     rotate(0deg)  scale(1); }
+        }
+        @keyframes bj-slide-in2 {
+          from { opacity:0; transform: translateY(-28px) rotate(4deg) scale(.88); }
+          to   { opacity:1; transform: translateY(0)     rotate(0deg) scale(1); }
+        }
+        @keyframes bj-result-pop {
+          from { opacity:0; transform: scale(.7) translateY(10px); }
+          to   { opacity:1; transform: scale(1)  translateY(0); }
+        }
+        @keyframes bj-shake {
+          0%,100%{ transform:translateX(0); }
+          20%    { transform:translateX(-10px); }
+          60%    { transform:translateX(10px); }
+        }
+        @keyframes bj-win-glow {
+          0%,100%{ box-shadow:0 0 30px rgba(0,255,180,.3); }
+          50%    { box-shadow:0 0 60px rgba(0,255,180,.7),0 0 100px rgba(0,255,180,.2); }
+        }
+        .bj-btn {
+          font-family:'Orbitron',sans-serif;
+          font-weight:900;
+          font-size:.82rem;
+          letter-spacing:.1em;
+          text-transform:uppercase;
+          border:none;
+          border-radius:50px;
+          cursor:pointer;
+          -webkit-tap-highlight-color:transparent;
+          transition:transform .1s, box-shadow .1s, filter .1s;
+          position:relative;
+        }
+        .bj-btn:active {
+          transform:scale(.95) translateY(2px) !important;
+          filter:brightness(.85);
+        }
+        .bj-card {
+          border-radius:14px;
+          background:linear-gradient(160deg,#ffffff,#f2f2f2);
+          box-shadow:4px 8px 22px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.9);
+          border:1.5px solid rgba(0,0,0,.12);
+          display:flex;flex-direction:column;
+          padding:8px 7px;
+          flex-shrink:0;
+        }
+        .bj-card-back {
+          border-radius:14px;
+          background:linear-gradient(135deg,#0f2a5a 0%,#0a1f45 40%,#0f2a5a 100%);
+          background-image:repeating-linear-gradient(
+            45deg,
+            rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,
+            transparent 1px,transparent 10px
+          );
+          box-shadow:4px 8px 22px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.06);
+          border:1.5px solid rgba(255,255,255,.08);
+          display:flex;align-items:center;justify-content:center;
+          flex-shrink:0;
+        }
+        .bj-table {
+          background:
+            radial-gradient(ellipse at 50% 0%, rgba(0,80,40,.8) 0%, transparent 70%),
+            radial-gradient(ellipse at 50% 100%, rgba(0,40,20,.5) 0%, transparent 60%),
+            linear-gradient(180deg, #042a14 0%, #021a0c 50%, #011008 100%);
+          border-radius:28px;
+          border:2px solid rgba(0,200,100,.15);
+          box-shadow:
+            0 0 0 1px rgba(0,0,0,.8),
+            0 4px 40px rgba(0,0,0,.9),
+            inset 0 1px 0 rgba(0,255,140,.08),
+            inset 0 -1px 0 rgba(0,0,0,.5);
+        }
+        .bj-zone {
+          background:
+            rgba(0,0,0,.25);
+          border-radius:20px;
+          border:1px solid rgba(255,255,255,.06);
+          box-shadow:inset 0 2px 8px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.04);
+        }
+        .bj-deal-btn {
+          font-family:'Orbitron',sans-serif;
+          font-weight:900;
+          font-size:1rem;
+          letter-spacing:.18em;
+          text-transform:uppercase;
+          color:#030f08;
+          background:linear-gradient(135deg,#00ffaa,#00cc88);
+          border:none;
+          border-radius:50px;
+          cursor:pointer;
+          -webkit-tap-highlight-color:transparent;
+          box-shadow:0 6px 0 #007744, 0 8px 30px rgba(0,255,150,.45);
+          transition:transform .1s,box-shadow .1s;
+        }
+        .bj-deal-btn:active {
+          transform:translateY(4px);
+          box-shadow:0 2px 0 #007744, 0 4px 16px rgba(0,255,150,.3);
+        }
+      `;
+      document.head.appendChild(st);
+    }
 
-    const handHTML = (h, hide2) => `<div style="display:flex;gap:7px;flex-wrap:wrap;">${h.map((c,i)=>i===1&&hide2?cHTML(c,true):cHTML(c,false,i*0.07)).join('')}</div>`;
+    /* card width/height */
+    const CW=82, CH=118;
 
-    /* felt zone helper */
-    const feltZone = (label, valStr, valColor, handEl, extra='') => `
-      <div class="cs-felt" style="padding:14px 16px;animation:cs-tableslide .35s both;">
-        <div style="font-family:'Share Tech Mono',monospace;font-size:.54rem;color:rgba(255,255,255,.4);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px;">
-          ${label} ${valStr?`<span style="color:${valColor};font-size:.68rem;font-weight:bold;">— ${valStr}</span>`:''}
+    const cardHTML=(c,delay=0,rot=0)=>`
+      <div class="bj-card" style="width:${CW}px;height:${CH}px;color:${isRed(c)?'#cc0000':'#0a0a1a'};
+        animation:${rot<0?'bj-slide-in':'bj-slide-in2'} .32s ${delay}s both;">
+        <div style="font-family:'Orbitron',sans-serif;font-size:.78rem;font-weight:900;line-height:1.1;">
+          ${c.r}<br><span style="font-size:1rem;">${c.s}</span>
         </div>
-        ${handEl}
-        ${extra}
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:2.1rem;
+          text-shadow:${isRed(c)?'0 1px 6px rgba(180,0,0,.2)':'0 1px 6px rgba(0,0,0,.15)'};">
+          ${c.s}
+        </div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:.78rem;font-weight:900;line-height:1.1;
+          align-self:flex-end;transform:rotate(180deg);">
+          ${c.r}<br><span style="font-size:1rem;">${c.s}</span>
+        </div>
       </div>`;
 
-    const idle = () => {
-      wrap.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:22px;padding-top:20px;">
+    const cardBackHTML=(delay=0)=>`
+      <div class="bj-card-back" style="width:${CW}px;height:${CH}px;animation:bj-slide-in2 .32s ${delay}s both;">
+        <div style="width:70%;height:80%;border-radius:8px;border:2px solid rgba(255,255,255,.12);
+          display:flex;align-items:center;justify-content:center;
+          background:repeating-linear-gradient(45deg,rgba(255,255,255,.03) 0,rgba(255,255,255,.03) 2px,transparent 2px,transparent 8px);">
+          <div style="font-size:1.8rem;opacity:.3;">🂠</div>
+        </div>
+      </div>`;
 
-          <div style="font-size:4.5rem;filter:drop-shadow(0 8px 20px rgba(0,0,0,.6));animation:cs-win3d 2s infinite;">♠️</div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:900;color:#00ffcc;letter-spacing:.12em;text-shadow:0 0 20px rgba(0,255,204,.5);">BLACKJACK</div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.3);text-align:center;line-height:1.9;max-width:260px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:14px 18px;">
-            Get closer to 21 than the dealer.<br>Dealer stands on 17.<br>Blackjack pays 1.5×.
-          </div>
+    const handEl=(h,hide2)=>`
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        ${h.map((c,i)=>i===1&&hide2?cardBackHTML(i*0.08):cardHTML(c,i*0.08,i%2===0?-2:2)).join('')}
+      </div>`;
 
-          <!-- bet chips row -->
-          <div style="display:flex;align-items:center;gap:14px;">
-            <button id="bj-bd" class="cs-chip" style="background:radial-gradient(circle at 40% 38%,#e05555,#992222);box-shadow:0 5px 0 #551111,inset 0 2px 0 rgba(255,255,255,.25);">−</button>
-            <div style="text-align:center;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15);border-radius:16px;padding:10px 22px;box-shadow:0 4px 16px rgba(0,0,0,.4);">
-              <div style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:rgba(255,215,0,.45);text-transform:uppercase;letter-spacing:.14em;">Bet</div>
-              <div id="bj-bet" style="font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:900;color:#ffd700;text-shadow:0 0 14px rgba(255,215,0,.5);">${bet}</div>
+    /* ── full-screen layout render ── */
+    const render=(state='idle',rev=false,resultMsg='',resultType='')=>{
+      const pv=hval(ph), dv=hval(dh);
+      const bust=state==='playing'&&pv>21;
+      const bj=state==='playing'&&ph.length===2&&pv===21;
+      const done=bust||bj||rev;
+
+      wrap.style.cssText='position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;'+
+        'background:linear-gradient(180deg,#000000 0%,#020f07 40%,#011008 100%);'+
+        'display:flex;flex-direction:column;padding:10px 14px 30px;gap:12px;';
+
+      wrap.innerHTML=`
+        <!-- TABLE -->
+        <div class="bj-table" style="flex:1;display:flex;flex-direction:column;padding:14px 14px 16px;gap:10px;min-height:0;">
+
+          <!-- DEALER ZONE -->
+          <div class="bj-zone" style="flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;
+              color:rgba(0,255,140,.55);display:flex;align-items:center;gap:8px;">
+              DEALER
+              ${rev?`<span style="font-size:.72rem;font-weight:700;color:${dv>21?'#ff5555':dv>=17?'#ffd700':'#00ff8c'};
+                text-shadow:0 0 10px currentColor;">${dv}</span>`:''}
             </div>
-            <button id="bj-bu" class="cs-chip" style="background:radial-gradient(circle at 40% 38%,#55e055,#229922);box-shadow:0 5px 0 #115511,inset 0 2px 0 rgba(255,255,255,.25);">+</button>
+            ${state==='idle'
+              ? `<div style="display:flex;gap:10px;justify-content:center;opacity:.3;">
+                   ${cardBackHTML(0)}${cardBackHTML(.06)}
+                 </div>`
+              : handEl(dh,!rev)
+            }
           </div>
 
-          <button id="bj-deal" class="cs-btn-3d" style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#050508;background:linear-gradient(135deg,#00ffcc,#00bb99);border:none;padding:20px 60px;border-radius:50px;cursor:pointer;box-shadow:0 7px 0 #007755,0 12px 32px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent;">Deal</button>
+          <!-- PLAYER ZONE -->
+          <div class="bj-zone" style="flex:1.2;padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;
+              color:rgba(0,255,140,.55);display:flex;align-items:center;gap:8px;">
+              YOU
+              ${state!=='idle'?`<span style="font-size:.72rem;font-weight:700;
+                color:${pv>21?'#ff5555':pv===21?'#ffd700':'rgba(255,255,255,.9)'};
+                text-shadow:0 0 10px currentColor;">— ${pv}</span>`:''}
+            </div>
+            ${state==='idle'
+              ? `<div style="display:flex;gap:10px;justify-content:center;opacity:.3;">
+                   ${cardBackHTML(0)}${cardBackHTML(.06)}
+                 </div>`
+              : handEl(ph,false)
+            }
+          </div>
 
-          <div style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:rgba(255,255,255,.15);text-align:center;">Blackjack pays ×1.5 · Dealer stands on 17</div>
-        </div>`;
+          <!-- RESULT -->
+          ${resultMsg?`
+            <div style="text-align:center;animation:bj-result-pop .3s both;
+              ${resultType==='shake'?'animation:bj-shake .35s both;':''}">
+              <span style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:900;
+                letter-spacing:.08em;
+                color:${resultType==='win'?'#00ffaa':resultType==='bj'?'#ffd700':'#ff5555'};
+                text-shadow:0 0 20px currentColor;">${resultMsg}</span>
+            </div>`:''
+          }
 
-      const sb=v=>{bet=Math.max(5,Math.min(500,v));document.getElementById('bj-bet').textContent=bet;};
-      document.getElementById('bj-bd').onclick=()=>{haptic('light');sb(bet-5);};
-      document.getElementById('bj-bu').onclick=()=>{haptic('light');sb(bet+5);};
-      document.getElementById('bj-deal').onclick=()=>{
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div style="display:flex;gap:10px;justify-content:center;">
+          ${state==='playing'&&!done?`
+            <button class="bj-btn" id="bj-hit" style="color:#fff;background:linear-gradient(135deg,#e53935,#8b0000);
+              padding:16px 0;width:30%;box-shadow:0 5px 0 #440000,0 6px 22px rgba(220,0,0,.4);">HIT</button>
+            <button class="bj-btn" id="bj-st" style="color:#fff;background:linear-gradient(135deg,#1565c0,#0d47a1);
+              padding:16px 0;width:30%;box-shadow:0 5px 0 #062070,0 6px 22px rgba(0,80,200,.4);">STAND</button>
+            ${ph.length===2&&_casinoCoins>=bet?`
+            <button class="bj-btn" id="bj-dbl" style="color:#fff;background:linear-gradient(135deg,#7b1fa2,#4a0072);
+              padding:16px 0;width:30%;box-shadow:0 5px 0 #220040,0 6px 22px rgba(120,0,200,.4);">DOUBLE</button>`:''}
+          `:done?`
+            <button class="bj-btn" id="bj-again" style="color:#030f08;background:linear-gradient(135deg,#00ffaa,#00cc88);
+              padding:16px 50px;box-shadow:0 5px 0 #007744,0 6px 22px rgba(0,255,150,.4);">PLAY AGAIN</button>
+          `:''}
+        </div>
+
+        <!-- BET + DEAL -->
+        <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+
+          <!-- bet row -->
+          <div style="display:flex;align-items:center;gap:16px;
+            background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+            border-radius:50px;padding:10px 22px;
+            box-shadow:0 4px 16px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);">
+            <button id="bj-bd" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+              -webkit-tap-highlight-color:transparent;
+              background:radial-gradient(circle at 38% 35%,#e05555,#880000);
+              box-shadow:0 4px 0 #440000,0 0 12px rgba(200,0,0,.3);
+              color:#fff;font-size:1.3rem;font-weight:900;
+              display:flex;align-items:center;justify-content:center;
+              transition:transform .1s;" onpointerdown="this.style.transform='scale(.92) translateY(2px)'" onpointerup="this.style.transform=''">−</button>
+            <div style="text-align:center;min-width:70px;">
+              <div style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:rgba(255,215,0,.4);letter-spacing:.18em;text-transform:uppercase;">BET</div>
+              <div id="bj-bet-disp" style="font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:900;color:#ffd700;
+                text-shadow:0 0 16px rgba(255,215,0,.5);">${bet}</div>
+            </div>
+            <button id="bj-bu" style="width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;
+              -webkit-tap-highlight-color:transparent;
+              background:radial-gradient(circle at 38% 35%,#55e077,#117733);
+              box-shadow:0 4px 0 #0a4422,0 0 12px rgba(0,200,80,.3);
+              color:#fff;font-size:1.3rem;font-weight:900;
+              display:flex;align-items:center;justify-content:center;
+              transition:transform .1s;" onpointerdown="this.style.transform='scale(.92) translateY(2px)'" onpointerup="this.style.transform=''">+</button>
+          </div>
+
+          <!-- deal button -->
+          <button class="bj-deal-btn" id="bj-deal" style="width:100%;padding:20px 0;
+            ${state!=='idle'?'opacity:.35;pointer-events:none;':''}"
+          >DEAL</button>
+
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.5rem;color:rgba(255,255,255,.12);text-align:center;letter-spacing:.08em;">
+            Get closer to 21 than the dealer. &nbsp;·&nbsp; Dealer stands on 17. &nbsp;·&nbsp; Blackjack pays 1.5×.
+          </div>
+        </div>
+      `;
+
+      /* wire up buttons */
+      const setBet=v=>{bet=Math.max(5,Math.min(500,v));const el=document.getElementById('bj-bet-disp');if(el)el.textContent=bet;};
+      const bd=document.getElementById('bj-bd');
+      const bu=document.getElementById('bj-bu');
+      const deal=document.getElementById('bj-deal');
+      const hit=document.getElementById('bj-hit');
+      const stand=document.getElementById('bj-st');
+      const dbl=document.getElementById('bj-dbl');
+      const again=document.getElementById('bj-again');
+
+      if(bd)bd.onclick=()=>{haptic('light');setBet(bet-5);};
+      if(bu)bu.onclick=()=>{haptic('light');setBet(bet+5);};
+
+      if(deal)deal.onclick=()=>{
         if(_casinoCoins<bet)return;
         haptic('medium');
-        updateWallet(-bet,document.getElementById('bj-deal'));
-        ph=[drawCard(),drawCard()];dh=[drawCard(),drawCard()];gs='playing';playing();
+        updateWallet(-bet,deal);
+        ph=[drawCard(),drawCard()];dh=[drawCard(),drawCard()];
+        const pv2=hval(ph);
+        if(ph.length===2&&pv2===21){
+          // blackjack on deal
+          const prize=Math.round(bet*1.5)+bet;updateWallet(prize,null);
+          render('playing',true,'🃏 BLACKJACK! +'+prize,'bj');
+        } else {
+          render('playing',false);
+        }
+      };
+
+      if(hit)hit.onclick=()=>{
+        haptic('medium');ph.push(drawCard());
+        const pv2=hval(ph);
+        if(pv2>21){render('playing',true,'💥 BUST — Dealer wins','shake');}
+        else if(pv2===21){while(hval(dh)<17)dh.push(drawCard());doReveal();}
+        else{render('playing',false);}
+      };
+
+      if(stand)stand.onclick=()=>{
+        haptic('medium');
+        while(hval(dh)<17)dh.push(drawCard());
+        doReveal();
+      };
+
+      if(dbl)dbl.onclick=()=>{
+        haptic('medium');
+        updateWallet(-bet,dbl);
+        bet*=2;
+        ph.push(drawCard());
+        while(hval(dh)<17)dh.push(drawCard());
+        doReveal();
+      };
+
+      if(again)again.onclick=()=>{
+        ph=[];dh=[];
+        bet=Math.min(bet,_casinoCoins||5);
+        render('idle');
       };
     };
 
-    const playing = (rev=false) => {
+    const doReveal=()=>{
       const pv=hval(ph),dv=hval(dh);
-      const bust=pv>21,bj=ph.length===2&&pv===21;
-
-      let resultHTML='';
-      let prize=0;
-      if(bust){
-        resultHTML=`<div style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;color:#ff6b6b;text-align:center;text-shadow:0 0 16px rgba(255,80,80,.5);animation:cs-shake .4s both;">💥 Bust! Dealer wins.</div>`;
-        haptic('heavy');
-      } else if(bj){
-        prize=Math.round(bet*1.5)+bet; updateWallet(prize,null);
-        resultHTML=`<div style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;color:#ffd700;text-align:center;text-shadow:0 0 20px rgba(255,215,0,.7);animation:cs-win3d .5s both;">🃏 Blackjack! +${prize}</div>`;
-        haptic('success');
-      } else if(rev){
-        if(hval(dh)>21||pv>dv){
-          prize=bet*2; updateWallet(prize,null);
-          resultHTML=`<div style="font-family:'Orbitron',sans-serif;font-size:.95rem;font-weight:900;color:#00ffcc;text-align:center;text-shadow:0 0 20px rgba(0,255,204,.6);animation:cs-win3d .5s both;">🏆 You win! +${prize}</div>`;
-          haptic('success');
-        } else if(pv===dv){
-          updateWallet(bet,null);
-          resultHTML=`<div style="font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:900;color:#ffd700;text-align:center;">🤝 Push — bet returned</div>`;
-          haptic('light');
-        } else {
-          resultHTML=`<div style="font-family:'Orbitron',sans-serif;font-size:.88rem;font-weight:900;color:#ff6b6b;text-align:center;animation:cs-shake .4s both;">💀 Dealer wins (${hval(dh)} vs ${pv})</div>`;
-          haptic('heavy');
-        }
+      if(dv>21||pv>dv){
+        const prize=bet*2;updateWallet(prize,null);
+        render('playing',true,'🏆 YOU WIN  +'+prize,'win');
+      } else if(pv===dv){
+        updateWallet(bet,null);
+        render('playing',true,'🤝 PUSH — Bet returned','push');
+      } else {
+        render('playing',true,'💀 DEALER WINS  ('+dv+' vs '+pv+')','lose');
       }
-
-      wrap.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:14px;padding-top:8px;">
-
-          ${feltZone('Dealer', rev?String(dv):'', dv>21?'#ff6b6b':dv>=17?'#ffd700':'#00ffcc', handHTML(dh,!rev))}
-          ${feltZone('You', String(pv), pv>21?'#ff6b6b':pv===21?'#ffd700':'#00ffcc', handHTML(ph,false))}
-
-          ${resultHTML}
-
-          <!-- action buttons -->
-          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
-            ${bust||bj||rev
-              ? `<button id="bj-ag" class="cs-btn-3d" style="font-family:'Orbitron',sans-serif;font-size:.82rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#050508;background:linear-gradient(135deg,#00ffcc,#00bb99);border:none;padding:16px 44px;border-radius:50px;cursor:pointer;box-shadow:0 6px 0 #007755,0 8px 24px rgba(0,255,204,.4);-webkit-tap-highlight-color:transparent;">Play Again</button>`
-              : `<button id="bj-hit" class="cs-btn-3d" style="font-family:'Orbitron',sans-serif;font-size:.82rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#e53935,#8b0000);border:none;padding:14px 30px;border-radius:22px;cursor:pointer;box-shadow:0 5px 0 #440000,0 6px 18px rgba(200,0,0,.4);-webkit-tap-highlight-color:transparent;">Hit</button>
-                 <button id="bj-st" class="cs-btn-3d" style="font-family:'Orbitron',sans-serif;font-size:.82rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#1565c0,#0d47a1);border:none;padding:14px 30px;border-radius:22px;cursor:pointer;box-shadow:0 5px 0 #072060,0 6px 18px rgba(0,80,200,.4);-webkit-tap-highlight-color:transparent;">Stand</button>
-                 ${ph.length===2&&_casinoCoins>=bet?`<button id="bj-dbl" class="cs-btn-3d" style="font-family:'Orbitron',sans-serif;font-size:.82rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#7b1fa2,#4a0072);border:none;padding:14px 30px;border-radius:22px;cursor:pointer;box-shadow:0 5px 0 #220033,0 6px 18px rgba(100,0,200,.4);-webkit-tap-highlight-color:transparent;">Double</button>`:''}`
-            }
-          </div>
-        </div>`;
-
-      const h=document.getElementById('bj-hit'),s=document.getElementById('bj-st'),d=document.getElementById('bj-dbl'),a=document.getElementById('bj-ag');
-      if(h)h.onclick=()=>{haptic('medium');ph.push(drawCard());if(hval(ph)>21)playing(true);else playing(false);};
-      if(s)s.onclick=()=>{haptic('medium');while(hval(dh)<17)dh.push(drawCard());playing(true);};
-      if(d)d.onclick=()=>{haptic('medium');updateWallet(-bet,d);bet*=2;ph.push(drawCard());while(hval(dh)<17)dh.push(drawCard());playing(true);};
-      if(a)a.onclick=()=>{gs='idle';bet=Math.min(bet,Math.max(_casinoCoins,5));idle();};
     };
 
-    mkDeck();idle();
+    mkDeck();render('idle');
   };
 
   /* ── Init ── */
