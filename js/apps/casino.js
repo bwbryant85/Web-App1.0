@@ -1143,13 +1143,14 @@ function initCasino() {
 
     /* ── game logic ── */
     const symAt = i => {
-      // When stopped, use the exact targetOffset set during spin (always integer)
-      // Fall back to rounded offset only if somehow still moving
+      // The reel draws row=0 at the TOP third (rawCY = ry+symH*0.5).
+      // The payline sits at ry+reelH*0.5 = ry+symH*1.5, which is row=1.
+      // So the symbol ON the payline is always base+1 (i.e. targetOffset+1).
       const r = reels[i];
-      const idx = r.stopped && r.targetOffset >= 0
-        ? (Math.round(r.targetOffset) % SL + SL) % SL
-        : (Math.round(r.offset) % SL + SL) % SL;
-      return STRIP[idx];
+      const base = r.stopped && r.targetOffset >= 0
+        ? Math.round(r.targetOffset)
+        : Math.round(r.offset);
+      return STRIP[((base + 1) % SL + SL) % SL];
     };
 
     const evalResult = () => {
