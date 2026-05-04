@@ -106,95 +106,58 @@ function initASCII() {
     document.body.appendChild(vid);
 
     /* ═══════════════════════════════════════════════
-       Sobel edge detection
-       1. Draw frame to small canvas (EW × EH)
-       2. Read pixels → greyscale
-       3. Run 3×3 Sobel kernel → magnitude
-       4. Threshold → draw white pixels on black
+       Sobel edge detection — clean single-pass render
     ═══════════════════════════════════════════════ */
+    const GX = [-1,0,1,-2,0,2,-1,0,1];
+    const GY = [-1,-2,-1,0,0,0,1,2,1];
+    const THRESH = 35;
+    const grey = new Float32Array(EW * EH);
+
     const edgeFrame = () => {
+      // 1. Sample the video frame into the small edge canvas
       eCtx.drawImage(vid, 0, 0, EW, EH);
       const src = eCtx.getImageData(0, 0, EW, EH);
       const d   = src.data;
-      const out = eCtx.createImageData(EW, EH);
-      const od  = out.data;
 
-      /* greyscale lookup */
-      const grey = new Float32Array(EW * EH);
+      // 2. Convert to greyscale
       for (let i = 0; i < EW * EH; i++) {
         const p = i * 4;
-        grey[i] = d[p]*.299 + d[p+1]*.587 + d[p+2]*.114;
+        grey[i] = d[p]*0.299 + d[p+1]*0.587 + d[p+2]*0.114;
       }
 
-      /* Sobel kernels Gx Gy */
-      const Gx = [-1,0,1,-2,0,2,-1,0,1];
-      const Gy = [-1,-2,-1,0,0,0,1,2,1];
-      const THRESH = 40; // lower = more edges, higher = fewer
-
+      // 3. Sobel + threshold — write directly into src buffer (reuse memory)
       for (let y = 1; y < EH-1; y++) {
         for (let x = 1; x < EW-1; x++) {
           let gx = 0, gy = 0;
           for (let ky = -1; ky <= 1; ky++) {
             for (let kx = -1; kx <= 1; kx++) {
-              const g = grey[(y+ky)*EW + (x+kx)];
+              const g  = grey[(y+ky)*EW + (x+kx)];
               const ki = (ky+1)*3 + (kx+1);
-              gx += Gx[ki] * g;
-              gy += Gy[ki] * g;
+              gx += GX[ki] * g;
+              gy += GY[ki] * g;
             }
           }
-          const mag   = Math.sqrt(gx*gx + gy*gy);
-          const idx   = (y*EW + x) * 4;
-          const v     = mag > THRESH ? 255 : 0;
-          od[idx]   = v;
-          od[idx+1] = v;
-          od[idx+2] = v;
-          od[idx+3] = 255;
+          const mag = Math.sqrt(gx*gx + gy*gy);
+          const p   = (y*EW + x) * 4;
+          if (mag > THRESH) {
+            // Neon cyan edge: R=0 G=255 B=204
+            d[p]   = 0;
+            d[p+1] = 255;
+            d[p+2] = 204;
+            d[p+3] = 255;
+          } else {
+            d[p]   = 0;
+            d[p+1] = 0;
+            d[p+2] = 0;
+            d[p+3] = 255;
+          }
         }
       }
 
-      eCtx.putImageData(out, 0, 0);
-
-      /* draw scaled to full output canvas */
-      actx.fillStyle = '#000';
-      actx.fillRect(0, 0, CW, CH);
+      // 4. Put the coloured edge data back and scale to output canvas
+      eCtx.putImageData(src, 0, 0);
       actx.imageSmoothingEnabled = false;
       actx.drawImage(eCV, 0, 0, CW, CH);
-
-      /* neon green tint using composite */
-      actx.save();
-      actx.globalCompositeOperation = 'multiply';
-      actx.fillStyle = '#000';
-      actx.fillRect(0, 0, CW, CH);
-      actx.restore();
-
-      /* Re-draw with neon colour */
-      actx.save();
-      actx.globalCompositeOperation = 'source-over';
-      /* tint white edges to neon */
-      actx.drawImage(eCV, 0, 0, CW, CH);
-      actx.globalCompositeOperation = 'source-atop';
-      actx.fillStyle = '#00ffcc';
-      actx.fillRect(0, 0, CW, CH);
-      actx.restore();
-
-      /* final: draw the edge data cleanly with colour */
-      actx.fillStyle = '#000';
-      actx.fillRect(0, 0, CW, CH);
-
-      /* draw edges white then recolour */
-      eCtx.putImageData(out, 0, 0);
-      const tempCV = document.createElement('canvas');
-      tempCV.width = EW; tempCV.height = EH;
-      const tCtx = tempCV.getContext('2d');
-      tCtx.putImageData(out, 0, 0);
-      actx.drawImage(tempCV, 0, 0, CW, CH);
-
-      /* colour overlay: make edges glow neon green */
-      actx.save();
-      actx.globalCompositeOperation = 'source-in';
-      actx.fillStyle = '#00ffcc';
-      actx.fillRect(0, 0, CW, CH);
-      actx.restore();
     };
 
     /* ═══════════════════════════════════════════════
