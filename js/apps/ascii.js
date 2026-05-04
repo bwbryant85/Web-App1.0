@@ -14,7 +14,7 @@ function initASCII() {
     st.id = 'asc-styles';
     st.textContent = `
       .asc-wrap { width:100%;height:100%;display:flex;flex-direction:column;background:#000;overflow:hidden; }
-      .asc-area { flex:1;position:relative;overflow:hidden; }
+      .asc-area { flex:1;position:relative;overflow:hidden;background:#000; }
       .asc-botbar {
         flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:10px;
         padding:10px 14px calc(var(--sb,0px) + 10px);background:#000;
@@ -77,12 +77,12 @@ function initASCII() {
 
     /* ── output canvas (full res) ── */
     const ascCV = document.createElement('canvas');
-    ascCV.width  = Math.round(CW * DPR);
-    ascCV.height = Math.round(CH * DPR);
-    ascCV.style.cssText = `display:block;width:${CW}px;height:${CH}px;`;
+    ascCV.width  = CW;
+    ascCV.height = CH;
+    ascCV.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;display:block;';
     area.appendChild(ascCV);
     const actx = ascCV.getContext('2d');
-    actx.scale(DPR, DPR);
+    // No DPR scale needed — canvas fills 100% via CSS
 
     /* ── small sampling canvas (ASCII / Color) ── */
     const sCV = document.createElement('canvas');
@@ -91,7 +91,8 @@ function initASCII() {
 
     /* ── edge detection canvas (native resolution) ── */
     const eCV = document.createElement('canvas');
-    const EW = 320, EH = Math.round(320 * CH / CW);
+    // Use full display resolution for edge detection — no chunky pixels
+    const EW = CW, EH = CH;
     eCV.width = EW; eCV.height = EH;
     const eCtx = eCV.getContext('2d', { willReadFrequently:true });
 
