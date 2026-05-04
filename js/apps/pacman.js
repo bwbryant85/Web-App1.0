@@ -224,7 +224,18 @@ function initPacman() {
         maze[pR][pC] = 0; score += 50; pelletsLeft--;
         const cfg = getLevelCfg(level);
         frightTotal = cfg.ftime; frightSec = frightTotal; eatCombo = 0;
-        ghosts.forEach(g => { if (g.mode !== 'eaten' && g.mode !== 'house') g.mode = 'frightened'; });
+        ghosts.forEach(g => {
+          if (g.mode !== 'eaten' && g.mode !== 'house') {
+            g.mode = 'frightened';
+            // Force immediate random direction so no BFS step is in flight
+            const valid = DIRS.filter(d => passable(g.r+d.r, g.c+d.c, true, 'frightened'));
+            if (valid.length) {
+              const pick = valid[Math.floor(Math.random()*valid.length)];
+              g.dr=pick.r; g.dc=pick.c;
+              g.nr=g.r+pick.r; g.nc=g.c+pick.c; g.prog=0;
+            }
+          }
+        });
         if (pelletsLeft <= 0) { gameState = 'levelup'; haptic('success'); return; }
       }
       pickNextPac();
@@ -368,9 +379,11 @@ function initPacman() {
     ghosts.forEach(g => {
       if (g.mode==='house') {
         g.houseTimer -= dt;
-        if (g.houseTimer > 0) return;
+        if (g.houseTimer > 0) return; // still waiting in house
+        // houseTimer expired — let ghost start moving but keep house mode
+        // pickNextGhost will handle the exit sequence
       }
-      g.prog += gSpeed(g) * dt;
+      g.prog = Math.min(g.prog + gSpeed(g) * dt, 1.5); // cap to avoid skipping tiles
       if (g.prog >= 1.0) {
         g.prog = 0; g.r=g.nr; g.c=wrapC(g.nc); g.nr=g.r; g.nc=g.c;
         if (g.r===TUNNEL_ROW) {
@@ -379,7 +392,7 @@ function initPacman() {
           g.nr=g.r; g.nc=g.c;
         }
         if (g.mode==='eaten'&&g.r===11&&wrapC(g.c)===13) { g.mode='scatter'; g.dr=0; g.dc=0; }
-        pickNextGhost(g);
+        try { pickNextGhost(g); } catch(e) { g.prog=0.01; }
       }
     });
   };

@@ -1,11 +1,59 @@
 /* ════════════ WEATHER ════════════ */
-const WX_ICONS = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WX_ICONS_DAY   = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WX_ICONS_NIGHT = {0:'🌙',1:'🌙',2:'☁️',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',77:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WX_ICONS = WX_ICONS_DAY; // fallback
 const WX_DESC = {0:'Clear Sky',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',48:'Icy Fog',51:'Light Drizzle',53:'Drizzle',55:'Heavy Drizzle',61:'Light Rain',63:'Rain',65:'Heavy Rain',71:'Light Snow',73:'Snow',75:'Heavy Snow',80:'Showers',81:'Rain Showers',82:'Heavy Showers',95:'Thunderstorm',96:'Hail Storm',99:'Heavy Hail'};
 
 function initWeather() {
   let celsius = true, wdata = null;
   const wrap = document.createElement('div');
   wrap.className = 'wx-wrap';
+
+  /* Dynamic background helper — called after wdata is set */
+  const applyBackground = () => {
+    if (!wdata) return;
+    const code = wdata.code, isDay = wdata.isDay;
+    const tc = wdata.tc;
+
+    // Pick gradient based on condition + time of day
+    let bg;
+    if (!isDay) {
+      // Night — deep navy/purple sky, stars hinted via radial
+      if ([95,96,99].includes(code))
+        bg = 'linear-gradient(180deg,#1a0a2e 0%,#0d0818 40%,#060308 100%)';
+      else if ([61,63,65,80,81,82].includes(code))
+        bg = 'linear-gradient(180deg,#1a2030 0%,#0d1520 50%,#060a0f 100%)';
+      else
+        bg = 'linear-gradient(180deg,#0d1b3e 0%,#091228 40%,#040810 100%)';
+    } else {
+      // Daytime conditions
+      if ([95,96,99].includes(code))      // thunderstorm
+        bg = 'linear-gradient(180deg,#1c1f26 0%,#2d3040 40%,#3d3530 100%)';
+      else if ([71,73,75,77,85,86].includes(code)) // snow
+        bg = 'linear-gradient(180deg,#b0c4d8 0%,#d8e8f0 50%,#e8f0f8 100%)';
+      else if ([61,63,65,80,81,82].includes(code)) // rain
+        bg = 'linear-gradient(180deg,#2c3e50 0%,#3d5060 40%,#546070 100%)';
+      else if ([45,48].includes(code))    // fog
+        bg = 'linear-gradient(180deg,#8090a0 0%,#a0b0c0 50%,#b8c8d8 100%)';
+      else if ([2,3].includes(code))      // cloudy
+        bg = 'linear-gradient(180deg,#4a6080 0%,#607898 40%,#7898b0 100%)';
+      else if (code === 1)                // partly cloudy
+        bg = 'linear-gradient(180deg,#2980b9 0%,#6bb6e0 40%,#87ceeb 100%)';
+      else {                              // clear/sunny
+        if (tc > 30)
+          bg = 'linear-gradient(180deg,#1a4a8a 0%,#2e6db0 30%,#5fa8d8 60%,#f4a460 100%)';
+        else
+          bg = 'linear-gradient(180deg,#1c4a8a 0%,#2e78b8 40%,#64b0e0 100%)';
+      }
+    }
+    wrap.style.background = bg;
+    wrap.style.backgroundAttachment = 'fixed';
+
+    // Star overlay for night
+    if (!isDay) {
+      wrap.style.backgroundImage = bg + ', radial-gradient(ellipse at 20% 15%, rgba(255,255,255,.04) 0%, transparent 60%)';
+    }
+  };
   content.appendChild(wrap);
 
   const comDir = d => ['N','NE','E','SE','S','SW','W','NW'][Math.round(d / 45) % 8];
@@ -35,7 +83,8 @@ function initWeather() {
   const render = () => {
     if (!wdata) return;
     const d = wdata;
-    const icon = WX_ICONS[d.code] || '🌡️';
+    const wxIconSet = d.isDay ? WX_ICONS_DAY : WX_ICONS_NIGHT;
+    const icon = wxIconSet[d.code] || (d.isDay ? '🌡️' : '🌙');
     const desc = WX_DESC[d.code] || 'Unknown';
     const daily = d.daily, hourly = d.hourly;
 
@@ -93,11 +142,12 @@ function initWeather() {
         const isNow = shown === 0;
         const hLabel = isNow ? 'Now' : ht.toLocaleTimeString('en-US', { hour:'numeric', hour12:true });
         const code = hourly.weather_code?.[i] ?? 0;
+        const hourIsDay = (() => { const h2=ht.getHours(); return h2>=6&&h2<20; })();
         const precip = hourly.precipitation_probability?.[i] ?? 0;
         const precipStr = precip >= 20 ? `<span style="font-size:.5rem;color:#4dd0e1;">${precip}%</span>` : '';
         hourlyHTML += `<div class="wx-hour-cell">
           <span class="wx-hour-time">${hLabel}</span>
-          <span class="wx-hour-ico">${WX_ICONS[code] || '🌡️'}</span>
+          <span class="wx-hour-ico">${(hourIsDay?WX_ICONS_DAY:WX_ICONS_NIGHT)[code] || (hourIsDay?'🌡️':'🌙')}</span>
           <span class="wx-hour-temp">${toT(hourly.temperature_2m?.[i] ?? 0)}°</span>
           ${precipStr}
         </div>`;
@@ -117,7 +167,7 @@ function initWeather() {
         </div>
         <div class="wx-hero-section">
           <div class="wx-city-name">${d.city.split(',')[0]}</div>
-          <div class="wx-hero-temp">${toT(d.tc)}°</div>
+          <div class="wx-hero-temp" style="color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.3);">${toT(d.tc)}°</div>
           <div class="wx-hero-cond">${icon} ${desc}</div>
           <div class="wx-hero-hl">H:${toT(daily?.temperature_2m_max?.[0] ?? d.tc)}° · L:${toT(daily?.temperature_2m_min?.[0] ?? d.tc)}°</div>
         </div>
@@ -171,7 +221,7 @@ function initWeather() {
     try {
       const wr = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-        `&current=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,wind_speed_10m,wind_direction_10m,weather_code,uv_index,visibility` +
+        `&current=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,wind_speed_10m,wind_direction_10m,weather_code,uv_index,visibility,is_day` +
         `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
         `&hourly=temperature_2m,weather_code,precipitation_probability` +
         `&timezone=auto&forecast_days=7`
@@ -197,8 +247,10 @@ function initWeather() {
         uv:Math.round(c.uv_index || 0),
         vis:Math.round((c.visibility || 0) / 1000),
         precip:(dl && dl.precipitation_probability_max && dl.precipitation_probability_max[0]) || 0,
-        daily:dl, hourly:h
+        daily:dl, hourly:h,
+        isDay: c.is_day === 1
       };
+      applyBackground();
       render();
     } catch(e) { showManual('Connection error. Try searching manually.'); }
   };
@@ -222,17 +274,79 @@ function initWeather() {
     }
 
     wrap.innerHTML = `
-      <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:89px 24px 60px;box-sizing:border-box;">
-        ${locBtnHTML}
-        <div style="font-size:2.6rem;line-height:1;margin-top:4px;">🌍</div>
-        <div style="font-family:'Share Tech Mono',monospace;font-size:.78rem;color:var(--text);letter-spacing:.06em;text-align:center;">SEARCH YOUR CITY</div>
-        <div style="position:relative;width:100%;max-width:300px;">
-          <input class="wx-city-input" id="wxi" type="text" placeholder="e.g. Dunkirk, NY" autocomplete="off" spellcheck="false">
-          <div class="wx-dropdown" id="wxd"></div>
+      <div style="width:100%;height:100%;display:flex;flex-direction:column;background:linear-gradient(180deg,#0d1b3e 0%,#091228 60%,#040810 100%);box-sizing:border-box;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+
+        <!-- Top spacer for Dynamic Island -->
+        <div style="height:${SA.t + 20}px;flex-shrink:0;"></div>
+
+        <!-- Icon + title area -->
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px 20px;gap:0;">
+
+          <!-- Weather globe animation -->
+          <div style="font-size:5.5rem;line-height:1;margin-bottom:16px;filter:drop-shadow(0 4px 20px rgba(100,180,255,.4));animation:wx-float 3s ease-in-out infinite;">🌍</div>
+
+          <div style="font-family:'Orbitron',sans-serif;font-size:1.4rem;font-weight:900;color:#fff;letter-spacing:.08em;text-align:center;margin-bottom:6px;">iPOCKET Weather</div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:.62rem;color:rgba(255,255,255,.35);letter-spacing:.12em;text-align:center;margin-bottom:28px;">WHERE ARE YOU?</div>
+
+          <!-- Location button — big and prominent -->
+          ${geoAvail ? `
+          <button id="wx-loc" style="
+            font-family:'Orbitron',sans-serif;font-size:.78rem;font-weight:900;
+            letter-spacing:.12em;text-transform:uppercase;
+            color:#030f08;background:linear-gradient(135deg,#00ffaa,#00cc88);
+            border:none;padding:18px 0;border-radius:50px;cursor:pointer;
+            box-shadow:0 6px 0 #007744,0 8px 30px rgba(0,255,150,.4);
+            -webkit-tap-highlight-color:transparent;
+            width:100%;max-width:320px;margin-bottom:24px;
+            transition:transform .1s,box-shadow .1s;">
+            📍 &nbsp;Use My Location
+          </button>` : ''}
+
+          <!-- Divider -->
+          <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:320px;margin-bottom:20px;">
+            <div style="flex:1;height:1px;background:rgba(255,255,255,.1);"></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:.52rem;color:rgba(255,255,255,.25);letter-spacing:.1em;">OR SEARCH</div>
+            <div style="flex:1;height:1px;background:rgba(255,255,255,.1);"></div>
+          </div>
+
+          <!-- Search input -->
+          <div style="position:relative;width:100%;max-width:320px;margin-bottom:10px;">
+            <input class="wx-city-input" id="wxi" type="text"
+              placeholder="City name, e.g. New York"
+              autocomplete="off" spellcheck="false"
+              style="font-size:.88rem;padding:16px 50px 16px 18px;border-radius:18px;
+                background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);
+                color:#fff;width:100%;box-sizing:border-box;
+                font-family:'Share Tech Mono',monospace;letter-spacing:.04em;
+                outline:none;-webkit-appearance:none;">
+            <button id="wxgo" style="
+              position:absolute;right:8px;top:50%;transform:translateY(-50%);
+              background:rgba(0,255,150,.15);border:1px solid rgba(0,255,150,.3);
+              color:#00ffaa;border-radius:12px;padding:8px 12px;
+              font-family:'Orbitron',sans-serif;font-size:.62rem;font-weight:700;
+              cursor:pointer;-webkit-tap-highlight-color:transparent;">→</button>
+            <div class="wx-dropdown" id="wxd" style="top:calc(100% + 6px);"></div>
+          </div>
+
+          ${errMsg ? `<div style="font-family:'Share Tech Mono',monospace;font-size:.54rem;color:rgba(255,180,80,.85);text-align:center;max-width:300px;line-height:1.6;margin-top:8px;background:rgba(255,150,0,.08);border:1px solid rgba(255,150,0,.15);border-radius:14px;padding:12px 16px;">${errMsg}</div>` : ''}
+
         </div>
-        ${errMsg ? `<div style="font-family:'Share Tech Mono',monospace;font-size:.56rem;color:rgba(255,200,100,.8);text-align:center;max-width:280px;line-height:1.55;">${errMsg}</div>` : ''}
-        <button class="cyan-btn" id="wxgo">Search →</button>
-      </div>`;
+
+        <!-- Bottom info -->
+        <div style="text-align:center;padding:0 24px 40px;font-family:'Share Tech Mono',monospace;font-size:.5rem;color:rgba(255,255,255,.15);letter-spacing:.08em;line-height:1.8;">
+          Powered by Open-Meteo &amp; OpenStreetMap
+        </div>
+      </div>
+
+      <style>
+        @keyframes wx-float {
+          0%,100%{transform:translateY(0);}
+          50%{transform:translateY(-10px);}
+        }
+        #wxi::placeholder{color:rgba(255,255,255,.3);}
+        #wxi:focus{background:rgba(255,255,255,.12);border-color:rgba(0,255,150,.4);}
+      </style>
+    `;
 
     // Location button
     const locEl = document.getElementById('wx-loc');
