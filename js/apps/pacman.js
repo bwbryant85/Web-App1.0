@@ -324,13 +324,20 @@ function initPacman() {
       }
       return;
     }
-    let step;
     if (g.mode === 'frightened') {
-      const valid = DIRS.filter(d=>d.r!==-g.dr||d.c!==-g.dc).filter(d=>passable(g.r+d.r,g.c+d.c,true,g.mode));
-      step = valid.length ? valid[Math.floor(Math.random()*valid.length)] : bfs(g.r,g.c,g.homeR,g.homeC,g);
-    } else {
-      step = bfs(g.r, g.c, ghostTarget(g).r, ghostTarget(g).c, g);
+      // Pure random walk — no BFS (avoids freeze). Try non-reverse first.
+      const valid = DIRS.filter(d => (d.r !== -g.dr || d.c !== -g.dc) && passable(g.r+d.r, g.c+d.c, true, g.mode));
+      const any   = valid.length ? valid : DIRS.filter(d => passable(g.r+d.r, g.c+d.c, true, g.mode));
+      if (any.length) {
+        const d = any[Math.floor(Math.random() * any.length)];
+        g.dr=d.r; g.dc=d.c; g.nr=g.r+d.r; g.nc=g.c+d.c; g.prog=0;
+      } else {
+        g.prog=0.01;
+      }
+      return;
     }
+    const t = ghostTarget(g);
+    const step = bfs(g.r, g.c, t.r, t.c, g);
     if (step.dr!==0||step.dc!==0) {
       const nr=g.r+step.dr, nc=g.c+step.dc;
       if (passable(nr,nc,true,g.mode)) { g.dr=step.dr; g.dc=step.dc; g.nr=nr; g.nc=nc; g.prog=0; return; }
