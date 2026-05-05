@@ -606,3 +606,41 @@ body::after{
   cursor:pointer;box-shadow:0 0 16px rgba(198,40,40,.45);-webkit-tap-highlight-color:transparent;
 }
 .bm-stop-btn:active{background:#8b0000}
+
+/* ── XP BADGE WRAP (home screen) ─────────────────── */
+#xp-badge-wrap{
+  display:flex;align-items:center;gap:10px;
+  width:100%;max-width:420px;
+  margin-bottom:14px;
+}
+
+/* ── BOOT SCREEN ──────────────────────────────────── */
+#boot-screen{
+  font-family:'Orbitron',sans-serif;
+}
+
+/* ── AI ASSISTANT ─────────────────────────────────── */
+#ai-loading-bubble{
+  animation:pulse-dim 1.2s ease infinite;
+}
+@keyframes pulse-dim{
+  0%,100%{opacity:.4}50%{opacity:.9}
+}
+
+/* ── TERMINAL ─────────────────────────────────────── */
+/* uses inline styles mostly */
+
+/* ── APP STORE ────────────────────────────────────── */
+#store-search{
+  -webkit-appearance:none;
+}
+#store-search::-webkit-search-cancel-button{ display:none; }
+
+/* ── FILE SYSTEM ──────────────────────────────────── */
+/* uses inline styles */
+
+/* ── TOAST OVERRIDE (ensure above everything) ─────── */
+#toast-container{ z-index:9999; }
+
+/* ── ACHIEVEMENT PANEL ────────────────────────────── */
+/* uses inline styles */
