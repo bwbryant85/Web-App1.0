@@ -70,6 +70,7 @@ function init2048() {
     if (scoreEl) scoreEl.textContent = score;
     if (bestEl)  bestEl.textContent  = best;
     if (isOver(grid)) {
+      if (window.POS) POS.submitScore('g2048', score);
       var ov = document.createElement('div');
       ov.style.cssText = 'position:absolute;inset:0;border-radius:12px;background:rgba(5,5,8,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);';
       ov.innerHTML = '<div style="font-size:1.5rem;font-weight:900;color:var(--mag);letter-spacing:.15em;text-shadow:var(--gm)">GAME OVER</div>'

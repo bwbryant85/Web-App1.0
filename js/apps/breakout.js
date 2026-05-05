@@ -108,7 +108,7 @@ function initBreakout() {
 
         if (b.y > H + BAL_R) {
           balls.splice(bi, 1);
-          if (balls.length === 0) { lives--; if (lives <= 0) state = 'dead'; else balls = [newBall()]; }
+          if (balls.length === 0) { lives--; if (lives <= 0) { state = 'dead'; if (window.POS) POS.submitScore('breakout', score); } else balls = [newBall()]; }
           continue;
         }
 
