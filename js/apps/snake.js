@@ -77,9 +77,11 @@ function initSnake() {
 
   const gameOver = () => {
     clearInterval(gloop);
+    if (window.POS) POS.submitScore('snake', score);
+    const best = window.POS ? POS.getHighScore('snake') : score;
     const ov = document.createElement('div');
     ov.className = 'snake-over';
-    ov.innerHTML = `<h2>GAME OVER</h2><div class="sco">SCORE: ${score}</div><button class="cyan-btn" id="snk-r">PLAY AGAIN</button>`;
+    ov.innerHTML = `<h2>GAME OVER</h2><div class="sco">SCORE: ${score}</div><div class="sco" style="font-size:.7rem;opacity:.6;margin-top:4px;">BEST: ${best}</div><button class="cyan-btn" id="snk-r">PLAY AGAIN</button>`;
     wrap.appendChild(ov);
     document.getElementById('snk-r').onclick = () => { reset(); gloop = setInterval(step, 115); };
   };
