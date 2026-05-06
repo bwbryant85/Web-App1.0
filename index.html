@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#008080">
+<title>iPOCKET OS</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- BOOT SCREEN -->
+<div id="boot-screen">
+  <div class="boot-logo">iPOCKET</div>
+  <div class="boot-tagline">A POCKET OS WITH RETRO POWER.</div>
+  <div class="boot-log" id="boot-log"></div>
+  <div class="boot-bar-wrap">
+    <div class="boot-bar-label" id="boot-bar-label">Initializing...</div>
+    <div class="boot-progress-outer">
+      <div class="boot-progress-inner" id="boot-bar"></div>
+      <div class="boot-pct" id="boot-pct">0%</div>
+    </div>
+  </div>
+  <div class="boot-skip" id="boot-skip">Click to skip</div>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop" style="display:none">
+
+  <!-- Status Bar -->
+  <div id="status-bar">
+    <div id="status-time" onclick="OS.toggleNotif()">12:00 PM</div>
+    <div id="status-right">
+      <div id="status-battery" onclick="OS.toggleNotif()">
+        <div class="battery-icon"><div class="battery-fill" id="bat-fill" style="width:87%"></div></div>
+        <span id="bat-pct">87%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen area -->
+  <div id="screen-area">
+
+    <!-- XP strip -->
+    <div id="xp-strip" onclick="OS.openApp('achievements')">
+      <span class="xp-level" id="xp-level-label">LV.1</span>
+      <div class="xp-bar-outer"><div class="xp-bar-inner" id="xp-bar-fill" style="width:0%"></div></div>
+      <span class="xp-text" id="xp-text-label">0 / 150 XP</span>
+      <span style="font-family:var(--pixel-font);font-size:13px;color:var(--win-text-dim);">🏆</span>
+    </div>
+
+    <!-- Home pages -->
+    <div id="home-pages">
+      <div class="home-page page-active" id="page-0">
+        <!-- Page 1 icons injected by JS -->
+      </div>
+      <div class="home-page page-right" id="page-1">
+        <!-- Page 2 icons injected by JS -->
+      </div>
+    </div>
+
+    <!-- Page dots -->
+    <div id="page-dots">
+      <div class="page-dot active" data-page="0" onclick="OS.goPage(0)"></div>
+      <div class="page-dot" data-page="1" onclick="OS.goPage(1)"></div>
+    </div>
+
+  </div>
+
+  <!-- Taskbar -->
+  <div id="taskbar">
+    <button id="start-btn" onclick="OS.toggleStart()">
+      <span class="start-ico">🖥️</span> Start
+    </button>
+    <div id="taskbar-apps"></div>
+    <div id="taskbar-clock" onclick="OS.openApp('clock')">
+      <span>🕐</span>
+      <span id="tb-clock">12:00</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- NOTIFICATIONS PANEL -->
+<div id="notif-panel">
+  <div class="notif-header">
+    <span class="notif-title">📋 Notifications</span>
+    <button class="win-btn win-close" onclick="OS.closeNotif()" style="background:var(--win-btn-face)">✕</button>
+  </div>
+  <div class="notif-list" id="notif-list"></div>
+  <div class="notif-footer">
+    <button class="btn98" onclick="OS.clearNotifs();OS.closeNotif()">Clear All</button>
+  </div>
+</div>
+
+<!-- START MENU -->
+<div id="start-menu">
+  <div class="start-menu-sidebar"><span class="start-menu-brand">iPOCKET</span></div>
+  <div class="start-menu-items">
+    <div class="start-menu-item" onclick="OS.openApp('settings');OS.closeStart()">⚙️ &nbsp;Settings</div>
+    <div class="start-menu-item" onclick="OS.openApp('achievements');OS.closeStart()">🏆 &nbsp;Achievements</div>
+    <div class="start-menu-item" onclick="OS.openApp('appstore');OS.closeStart()">🛍️ &nbsp;App Store</div>
+    <div class="start-menu-sep"></div>
+    <div class="start-menu-item" onclick="OS.openApp('assistant');OS.closeStart()">🤖 &nbsp;AI Assistant</div>
+    <div class="start-menu-item" onclick="OS.openApp('terminal');OS.closeStart()">💻 &nbsp;Terminal</div>
+    <div class="start-menu-item" onclick="OS.openApp('games');OS.closeStart()">🎮 &nbsp;Games</div>
+    <div class="start-menu-sep"></div>
+    <div class="start-menu-item" onclick="OS.showAbout();OS.closeStart()">ℹ️ &nbsp;About iPOCKET</div>
+    <div class="start-menu-sep"></div>
+    <div class="start-menu-item" onclick="OS.closeStart();OS.showShutdown()">🔴 &nbsp;Shut Down...</div>
+  </div>
+</div>
+
+<!-- APP SWITCHER -->
+<div id="app-switcher" onclick="e=>e.target===this&&OS.closeSwitcher()">
+  <div class="switcher-window">
+    <div class="switcher-titlebar">📋 App Switcher</div>
+    <div id="switcher-list"></div>
+    <button class="btn98 switcher-close-all" onclick="OS.closeAllApps()">Close All</button>
+  </div>
+</div>
+
+<!-- Window layer (all app windows rendered here) -->
+<div id="windows-layer"></div>
+
+<!-- Scripts -->
+<script src="js/state.js"></script>
+<script src="js/core.js"></script>
+
+<!-- All app modules -->
+<script src="js/apps/clock.js"></script>
+<script src="js/apps/sparks.js"></script>
+<script src="js/apps/weather.js"></script>
+<script src="js/apps/ascii.js"></script>
+<script src="js/apps/screensaver.js"></script>
+<script src="js/apps/snake.js"></script>
+<script src="js/apps/simon.js"></script>
+<script src="js/apps/djpad.js"></script>
+<script src="js/apps/flappy.js"></script>
+<script src="js/apps/pong.js"></script>
+<script src="js/apps/reaction.js"></script>
+<script src="js/apps/breakout.js"></script>
+<script src="js/apps/colorgame.js"></script>
+<script src="js/apps/benchmark.js"></script>
+<script src="js/apps/2048.js"></script>
+<script src="js/apps/timer.js"></script>
+<script src="js/apps/notes.js"></script>
+<script src="js/apps/gyro.js"></script>
+<script src="js/apps/visualizer.js"></script>
+<script src="js/apps/deviceinfo.js"></script>
+<script src="js/apps/sports.js"></script>
+<script src="js/apps/casino.js"></script>
+<script src="js/apps/pacman.js"></script>
+<script src="js/apps/assistant.js"></script>
+<script src="js/apps/terminal.js"></script>
+<script src="js/apps/filesystem.js"></script>
+<script src="js/apps/appstore.js"></script>
+<!-- New v8 apps -->
+<script src="js/apps/gallery.js"></script>
+<script src="js/apps/settings98.js"></script>
+<script src="js/apps/achievements98.js"></script>
+<script src="js/apps/games98.js"></script>
+<script src="js/apps/debug98.js"></script>
+<script src="js/apps/app_wrappers.js"></script>
+
+<script src="js/boot.js"></script>
+</body>
+</html>
