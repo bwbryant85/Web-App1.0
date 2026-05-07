@@ -2,7 +2,7 @@
    Modern app store with glass effects
    ════════════════════════════════════ */
 
-function initAppStore() {
+function initAppStore98() {
   POS.trackAppOpen('appstore');
 
   const ALL_STORE_APPS = [

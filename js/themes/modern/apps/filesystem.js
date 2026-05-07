@@ -2,7 +2,7 @@
    Modern file explorer with glass effects
    ════════════════════════════════════ */
 
-function initFileSystem() {
+function initFileSystem98() {
   POS.trackAppOpen('filesystem');
 
   const c = window.content;

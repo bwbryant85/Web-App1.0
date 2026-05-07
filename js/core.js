@@ -629,6 +629,50 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function loadAppScript(src, appId, theme, callback) {
+  // Remove any existing theme script for this app
+  document.querySelectorAll(`script[data-theme-script][data-app-id="${appId}"]`).forEach(el => el.remove());
+  const s = document.createElement('script');
+  s.src = src;
+  s.dataset.themeScript = 'true';
+  s.dataset.appId = appId;
+  s.dataset.theme = theme;
+  s.onload = callback;
+  s.onerror = () => {
+    // If theme script fails, try base script if not already retro
+    if (theme !== 'retro') {
+      loadAppScript(`js/apps/${appId}.js?t=${Date.now()}`, appId, 'retro', callback);
+    } else {
+      callback(); // Fallback to whatever is defined
+    }
+  };
+  document.head.appendChild(s);
+}
+
+function animateWindowToTaskbar(el, btn) {
+  if (!btn || !el) return;
+  const rect = el.getBoundingClientRect();
+  const target = btn.getBoundingClientRect();
+  const clone = el.cloneNode(true);
+  clone.style.position = 'fixed';
+  clone.style.left = `${rect.left}px`;
+  clone.style.top = `${rect.top}px`;
+  clone.style.width = `${rect.width}px`;
+  clone.style.height = `${rect.height}px`;
+  clone.style.margin = '0';
+  clone.style.transformOrigin = 'top left';
+  clone.style.transition = 'transform .32s ease, opacity .22s ease';
+  clone.style.zIndex = '99999';
+  clone.style.pointerEvents = 'none';
+  clone.style.opacity = '1';
+  document.body.appendChild(clone);
+  requestAnimationFrame(() => {
+    clone.style.transform = `translate(${target.left - rect.left}px, ${target.top - rect.top}px) scale(0.12)`;
+    clone.style.opacity = '0';
+  });
+  setTimeout(() => clone.remove(), 340);
+}
+
 /* ── WINDOW FACTORY ──────────────────────────────────────── */
 let winIdCounter = 0;
 

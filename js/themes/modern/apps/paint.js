@@ -2,7 +2,7 @@
    Modern paint app with glass effects
    ════════════════════════════════════ */
 
-function initPaint() {
+function initPaint98() {
   const c = window.content;
   c.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:rgba(248,249,252,.92);border-radius:28px;';
 

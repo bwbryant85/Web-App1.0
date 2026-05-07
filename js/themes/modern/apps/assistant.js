@@ -2,7 +2,7 @@
    Modern AI assistant with glass effects
    ════════════════════════════════════ */
 
-function initAssistant() {
+function initAssistant98() {
   POS.markFlag('usedAI');
   POS.trackAppOpen('assistant');
 

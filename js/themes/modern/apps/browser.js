@@ -1,5 +1,5 @@
 /* ════════════ BROWSER v8 MODERN — Proxy Edition ════════════ */
-function initBrowser() {
+function initBrowser98() {
   var c = window.content;
   c.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:rgba(248,249,252,.97);border-radius:28px;';
 

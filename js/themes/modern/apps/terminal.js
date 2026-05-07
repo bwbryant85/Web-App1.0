@@ -2,7 +2,7 @@
    Modern terminal with glass effects
    ════════════════════════════════════ */
 
-function initTerminal() {
+function initTerminal98() {
   POS.markFlag('usedTerminal');
   POS.trackAppOpen('terminal');
   POS.addXP(10, 'terminal');

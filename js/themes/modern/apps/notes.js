@@ -2,7 +2,7 @@
    Modern notes app with glass effects
    ════════════════════════════════════ */
 
-function initNotes() {
+function initNotes98() {
   const STORE_KEY = 'ipocket_notes';
 
   const load = () => {

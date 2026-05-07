@@ -2,7 +2,7 @@
    Modern clock with glass effects
    ════════════════════════════════════ */
 
-function initClock() {
+function initClock98() {
   let timer = null;
   let currentMode = 'digital'; // 'digital' or 'analog'
 
