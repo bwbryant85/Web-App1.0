@@ -37,6 +37,7 @@ function initPaint() {
   paintArea.className = 'paint-area';
   const canvas = document.createElement('canvas');
   canvas.className = 'paint-canvas';
+  canvas.style.touchAction = 'none';
   paintArea.appendChild(canvas);
   wrap.appendChild(paintArea);
 

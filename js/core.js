@@ -57,7 +57,7 @@ const APP_PAGES = [
   // PAGE 2
   [
     {id:'maps',       name:'Maps',        ico:'🗺️',  stub:'Coming Soon'},
-    {id:'library',    name:'Library',     ico:'📚',  stub:'Coming Soon'},
+    {id:'library',    name:'Library',     ico:'📚',  stub:false},
     {id:'crypto',     name:'Crypto',      ico:'₿',   stub:'Coming Soon'},
     {id:'sparks',      name:'Sparks',      ico:'✨',  stub:false},
     {id:'debug',      name:'Debug',       ico:'🐛',  stub:false},
@@ -247,6 +247,7 @@ const APP_INIT = {
   weather:      () => initWeather98(),
   timer:        () => initTimer98(),
   notes:        () => initNotes98(),
+  library:      () => initLibrary98(),
   sports:       () => initSports98(),
   casino:       () => initCasino98(),
   assistant:    () => initAssistant98(),
@@ -311,18 +312,10 @@ function applyTheme(theme) {
       };
 
       if (theme !== 'retro') {
-        const s = document.createElement('script');
-        s.src = `js/themes/${theme}/apps/${appId}.js?t=${Date.now()}`;
-        s.onload  = doInit;
-        s.onerror = doInit;
-        document.head.appendChild(s);
+        loadAppScript(`js/themes/${theme}/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
       } else {
         // Retro: reload the base script to reset the function to default
-        const s = document.createElement('script');
-        s.src = `js/apps/${appId}.js?t=${Date.now()}`;
-        s.onload  = doInit;
-        s.onerror = doInit;
-        document.head.appendChild(s);
+        loadAppScript(`js/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
       }
     });
 
@@ -389,19 +382,10 @@ window.OS = {
     
     // Load theme-specific app script if it exists and theme is not retro
     if (currentTheme !== 'retro') {
-      const themeScript = document.createElement('script');
-      themeScript.src = `js/themes/${currentTheme}/apps/${appId}.js`;
-      themeScript.onload = () => {
-        // Now call the init function (theme-specific version if loaded)
+      loadAppScript(`js/themes/${currentTheme}/apps/${appId}.js`, appId, currentTheme, () => {
         const initFn = APP_INIT[appId];
         win.cleanup = initFn ? initFn() : null;
-      };
-      themeScript.onerror = () => {
-        // Fallback to default if theme-specific doesn't exist
-        const initFn = APP_INIT[appId];
-        win.cleanup = initFn ? initFn() : null;
-      };
-      document.head.appendChild(themeScript);
+      });
     } else {
       const initFn = APP_INIT[appId];
       win.cleanup = initFn ? initFn() : null;
@@ -614,8 +598,12 @@ function createWindow98(meta) {
   const closeBtn = controls[2];
 
   minBtn.addEventListener('click', () => {
-    el.style.display = 'none';
-    updateTaskbar();
+    const btn = document.querySelector(`#taskbar-apps button[data-win-id="${id}"]`);
+    animateWindowToTaskbar(el, btn);
+    setTimeout(() => {
+      el.style.display = 'none';
+      updateTaskbar();
+    }, 80);
   });
   maxBtn.addEventListener('click', () => {
     el.style.display = 'flex';
@@ -647,6 +635,8 @@ function updateTaskbar() {
   openWindows.forEach(win => {
     const meta = APP_LOOKUP[win.appId] || {name: win.appId, ico:'📦'};
     const btn = document.createElement('button');
+    btn.dataset.winId = win.id;
+    btn.dataset.appId = win.appId;
     const hidden = window.getComputedStyle(win.el).display === 'none';
     btn.className = hidden ? 'taskbar-app-btn' : 'taskbar-app-btn active';
     btn.innerHTML = `${meta.ico} ${meta.name}`;

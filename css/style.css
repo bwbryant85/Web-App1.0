@@ -114,12 +114,16 @@ body.theme-modern .taskbar-app-btn{height:38px;padding:0 14px;max-width:200px;}
 body.theme-modern .taskbar-app-btn.active{background:rgba(239,243,254,.9);}
 body.theme-modern .page-dot{border:none;background:rgba(0,0,0,.16);}
 body.theme-modern .page-dot.active{background:var(--win-select);}
-body.theme-modern .win98-window{border-radius:28px;border:none;box-shadow:0 32px 120px rgba(15,23,42,.16);background:rgba(255,255,255,.92);overflow:hidden;}
-body.theme-modern .win-titlebar{background:rgba(255,255,255,.9);border:none;border-bottom:1px solid rgba(15,23,42,.08);height:48px;padding:0 16px;}
+body.theme-modern .win98-window{border-radius:32px;border:1px solid rgba(255,255,255,.72);box-shadow:0 40px 120px rgba(15,23,42,.18);background:rgba(255,255,255,.65);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);overflow:hidden;}
+body.theme-modern .win-titlebar{background:rgba(255,255,255,.72);border:none;border-bottom:1px solid rgba(15,23,42,.08);height:48px;padding:0 16px;backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);}
 body.theme-modern .win-titlebar-text{color:#111;font-family:var(--pixel-font);font-size:15px;font-weight:600;}
-body.theme-modern .win-btn{border-radius:999px;width:36px;height:36px;background:rgba(245,247,250,.95);border:none;color:#111;box-shadow:none;}
+body.theme-modern .win-btn{border-radius:999px;width:36px;height:36px;background:rgba(255,255,255,.88);border:none;color:#111;box-shadow:0 10px 20px rgba(15,23,42,.08);transition:transform .2s ease,background .2s ease;}
+body.theme-modern .win-btn:hover{background:rgba(255,255,255,.96);}
 body.theme-modern .win-btn:active{transform:none;}
-body.theme-modern .win-toolbar, body.theme-modern .win-menubar, body.theme-modern .win-statusbar{background:rgba(255,255,255,.8);border:none;box-shadow:none;}
+body.theme-modern .win-toolbar, body.theme-modern .win-menubar, body.theme-modern .win-statusbar{background:rgba(255,255,255,.82);border:none;box-shadow:none;}
+body.theme-modern .win-body{background:rgba(248,249,252,.82);}
+body.theme-modern .taskbar-app-btn{transition:transform .18s ease,background .2s ease,box-shadow .2s ease;}
+body.theme-modern .taskbar-app-btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(15,23,42,.12);}
 body.theme-modern .win-body{background:rgba(248,249,252,.92);}
 body.theme-modern .win-body-inset{border-radius:24px;border:none;}
 body.theme-modern .btn98, body.theme-modern .theme-preview, body.theme-modern .store98-item, body.theme-modern .files98-item, body.theme-modern .toggle98, body.theme-modern .browser-url, body.theme-modern .paint-toolbar, body.theme-modern .paint-controls, body.theme-modern .bm-card, body.theme-modern .clk-inner, body.theme-modern .bm-score-box{border-radius:20px;}

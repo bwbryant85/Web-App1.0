@@ -43,9 +43,9 @@ function initPaint() {
   c.appendChild(toolbar);
 
   const paintArea = document.createElement('div');
-  paintArea.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(248,249,252,.92);';
+  paintArea.style.cssText = 'flex:1;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(248,249,252,.92);touch-action:none;';
   const canvas = document.createElement('canvas');
-  canvas.style.cssText = 'background:#ffffff;border-radius:16px;box-shadow:0 16px 40px rgba(15,23,42,.06);max-width:100%;max-height:100%;';
+  canvas.style.cssText = 'background:#ffffff;border-radius:16px;box-shadow:0 16px 40px rgba(15,23,42,.06);max-width:100%;max-height:100%;touch-action:none;';
   paintArea.appendChild(canvas);
   c.appendChild(paintArea);
 
@@ -107,29 +107,35 @@ function initPaint() {
     };
   }
 
-  canvas.addEventListener('pointerdown', (e) => {
+  const onPointerDown = (e) => {
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
     drawing = true;
     const pos = getPos(e);
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
-  });
+  };
 
-  canvas.addEventListener('pointermove', (e) => {
+  const onPointerMove = (e) => {
     if (!drawing) return;
     const pos = getPos(e);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
-  });
+  };
 
-  canvas.addEventListener('pointerup', () => {
-    drawing = false;
-  });
+  const onPointerUp = () => { drawing = false; };
+  const onPointerCancel = () => { drawing = false; };
 
-  canvas.addEventListener('pointercancel', () => {
-    drawing = false;
-  });
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerCancel);
 
   return () => {
     window.removeEventListener('resize', resizeCanvas);
+    canvas.removeEventListener('pointerdown', onPointerDown);
+    canvas.removeEventListener('pointermove', onPointerMove);
+    canvas.removeEventListener('pointerup', onPointerUp);
+    canvas.removeEventListener('pointercancel', onPointerCancel);
   };
 }
