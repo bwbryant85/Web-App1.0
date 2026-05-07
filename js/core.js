@@ -275,15 +275,58 @@ function applyTheme(theme) {
   currentTheme = theme;
   localStorage.setItem('ipocket_theme', theme);
 
-  // Morph phase 1: shrink + blur all open windows
-  const MORPH_OUT = 220;
-  const MORPH_IN  = 280;
-  openWindows.forEach(win => {
-    win.el.style.transition = `transform ${MORPH_OUT}ms cubic-bezier(.4,0,.6,1), opacity ${MORPH_OUT}ms ease, filter ${MORPH_OUT}ms ease`;
-    win.el.style.transform  = 'scale(.88)';
-    win.el.style.opacity    = '0';
-    win.el.style.filter     = 'blur(8px)';
-  });
+  // Full-screen theme switch animation
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:48px;opacity:0;transition:opacity .6s ease;';
+
+  if (theme === 'modern') {
+    // Win11 style
+    ov.innerHTML = `
+      <svg width="72" height="72" viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0"  y="0"  width="40" height="40" rx="3" fill="#F25022"/>
+        <rect x="48" y="0"  width="40" height="40" rx="3" fill="#7FBA00"/>
+        <rect x="0"  y="48" width="40" height="40" rx="3" fill="#00A4EF"/>
+        <rect x="48" y="48" width="40" height="40" rx="3" fill="#FFB900"/>
+      </svg>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:28px;">
+        <div style="font-family:'Inter',system-ui,sans-serif;font-size:1.1rem;color:rgba(255,255,255,.85);letter-spacing:.02em;" id="theme-txt">Switching to Windows 11</div>
+        <div style="display:flex;gap:10px;" id="theme-dots">
+          <div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.85);animation:theme-dot .9s ease-in-out infinite;animation-delay:0s"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.85);animation:theme-dot .9s ease-in-out infinite;animation-delay:.2s"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.85);animation:theme-dot .9s ease-in-out infinite;animation-delay:.4s"></div>
+        </div>
+      </div>`;
+  } else if (theme === 'hacker') {
+    // Hacker style
+    ov.innerHTML = `
+      <div style="font-family:monospace;font-size:4rem;color:#00ff41;">⚡</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:28px;">
+        <div style="font-family:monospace;font-size:1.1rem;color:#00ff41;letter-spacing:.02em;" id="theme-txt">Hacking the theme...</div>
+        <div style="display:flex;gap:10px;" id="theme-dots">
+          <div style="width:10px;height:10px;border-radius:50%;background:#00ff41;animation:theme-dot .9s ease-in-out infinite;animation-delay:0s"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#00ff41;animation:theme-dot .9s ease-in-out infinite;animation-delay:.2s"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#00ff41;animation:theme-dot .9s ease-in-out infinite;animation-delay:.4s"></div>
+        </div>
+      </div>`;
+  } else {
+    // Retro style
+    ov.innerHTML = `
+      <div style="font-family:VT323,monospace;font-size:4rem;color:#fff;">💾</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:28px;">
+        <div style="font-family:VT323,monospace;font-size:1.1rem;color:#fff;letter-spacing:.02em;" id="theme-txt">Loading Windows 98...</div>
+        <div style="display:flex;gap:10px;" id="theme-dots">
+          <div style="width:10px;height:10px;border-radius:50%;background:#fff;animation:theme-dot .9s ease-in-out infinite;animation-delay:0s"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#fff;animation:theme-dot .9s ease-in-out infinite;animation-delay:.2s"></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:#fff;animation:theme-dot .9s ease-in-out infinite;animation-delay:.4s"></div>
+        </div>
+      </div>`;
+  }
+
+  const kf = document.createElement('style');
+  kf.textContent = '@keyframes theme-dot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}';
+  document.head.appendChild(kf);
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => { ov.style.opacity = '1'; });
 
   setTimeout(() => {
     // Apply new body class
@@ -291,39 +334,56 @@ function applyTheme(theme) {
     if (theme === 'hacker') document.body.classList.add('theme-hacker');
     if (theme === 'modern')  document.body.classList.add('theme-modern');
 
-    // Re-init each open window's content with new theme
+    // Morph phase 1: shrink + blur all open windows
+    const MORPH_OUT = 220;
+    const MORPH_IN  = 280;
     openWindows.forEach(win => {
-      const appId = win.appId;
-      // Clear existing content
-      if (win.cleanup) { try { win.cleanup(); } catch(e) {} win.cleanup = null; }
-      win.body.innerHTML = '';
-      window.content = win.body;
-
-      const doInit = () => {
-        const initFn = APP_INIT[appId];
-        win.cleanup = initFn ? initFn() || null : null;
-        // Morph phase 2: expand back in
-        requestAnimationFrame(() => {
-          win.el.style.transition = `transform ${MORPH_IN}ms cubic-bezier(.34,1.56,.64,1), opacity ${MORPH_IN}ms ease, filter ${MORPH_IN}ms ease`;
-          win.el.style.transform  = 'scale(1)';
-          win.el.style.opacity    = '1';
-          win.el.style.filter     = 'blur(0px)';
-        });
-      };
-
-      if (theme !== 'retro') {
-        loadAppScript(`js/themes/${theme}/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
-      } else {
-        // Retro: reload the base script to reset the function to default
-        loadAppScript(`js/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
-      }
+      win.el.style.transition = `transform ${MORPH_OUT}ms cubic-bezier(.4,0,.6,1), opacity ${MORPH_OUT}ms ease, filter ${MORPH_OUT}ms ease`;
+      win.el.style.transform  = 'scale(.88)';
+      win.el.style.opacity    = '0';
+      win.el.style.filter     = 'blur(8px)';
     });
 
-    // If no windows open, still apply class (already done above)
-    if (openWindows.length === 0) {
-      // nothing extra needed
-    }
-  }, MORPH_OUT);
+    setTimeout(() => {
+      // Re-init each open window's content with new theme
+      openWindows.forEach(win => {
+        const appId = win.appId;
+        // Clear existing content
+        if (win.cleanup) { try { win.cleanup(); } catch(e) {} win.cleanup = null; }
+        win.body.innerHTML = '';
+        window.content = win.body;
+
+        const doInit = () => {
+          const initFn = APP_INIT[appId];
+          win.cleanup = initFn ? initFn() || null : null;
+          // Morph phase 2: expand back in
+          requestAnimationFrame(() => {
+            win.el.style.transition = `transform ${MORPH_IN}ms cubic-bezier(.34,1.56,.64,1), opacity ${MORPH_IN}ms ease, filter ${MORPH_IN}ms ease`;
+            win.el.style.transform  = 'scale(1)';
+            win.el.style.opacity    = '1';
+            win.el.style.filter     = 'blur(0px)';
+          });
+        };
+
+        if (theme !== 'retro') {
+          loadAppScript(`js/themes/${theme}/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
+        } else {
+          // Retro: reload the base script to reset the function to default
+          loadAppScript(`js/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
+        }
+      });
+
+      // If no windows open, still apply class (already done above)
+      if (openWindows.length === 0) {
+        // nothing extra needed
+      }
+
+      // Fade out overlay
+      ov.style.transition = 'opacity 1s ease';
+      ov.style.opacity = '0';
+      setTimeout(() => ov.remove(), 1000);
+    }, MORPH_OUT);
+  }, 1500);
 }
 
 window.OS = {

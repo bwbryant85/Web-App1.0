@@ -13,6 +13,19 @@
   --accent:#000080;--pixel-font:'VT323',monospace;--mono-font:'Share Tech Mono',monospace;
   --safe-top:59px;--sb:env(safe-area-inset-bottom,0px);
 }
+
+/* iOS optimizations */
+body{touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;}
+.win98-window{touch-action:none;}
+.taskbar-app-btn{touch-action:manipulation;}
+.win-btn{touch-action:manipulation;}
+.btn98{touch-action:manipulation;}
+.app-icon{touch-action:manipulation;}
+#start-btn{touch-action:manipulation;}
+#taskbar-clock{touch-action:manipulation;}
+.page-dot{touch-action:manipulation;}
+.toggle98{touch-action:manipulation;}
+.paint-color{touch-action:manipulation;}
 body.theme-hacker{
   --win-bg:#000;--win-desktop:#000;--win-chrome:#111;--win-chrome-dark:#0a0a0a;
   --win-chrome-light:#00ff41;--win-chrome-highlight:#001a00;
