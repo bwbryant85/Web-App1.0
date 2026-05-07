@@ -199,8 +199,9 @@ function init2048() {
 
   function build() {
     wrap.innerHTML = '';
-    var avW = Math.min(content.offsetWidth - 20, 440);
-    cellSz = Math.floor((avW - PAD * 2 - GAP * (GRID - 1)) / GRID);
+    var avSize = Math.min(content.offsetWidth - 20, content.offsetHeight - 180, 520);
+    avSize = Math.max(avSize, 280);
+    cellSz = Math.floor((avSize - PAD * 2 - GAP * (GRID - 1)) / GRID);
 
     var top = document.createElement('div');
     top.className = 'g2048-top';
@@ -215,7 +216,7 @@ function init2048() {
 
     var total = PAD * 2 + GRID * cellSz + GAP * (GRID - 1);
     gridWrap = document.createElement('div');
-    gridWrap.style.cssText = 'position:relative;width:'+total+'px;height:'+total+'px;border-radius:12px;background:rgba(255,255,255,.06);flex-shrink:0;';
+    gridWrap.style.cssText = 'position:relative;width:'+total+'px;max-width:100%;margin:0 auto;height:'+total+'px;border-radius:12px;background:rgba(255,255,255,.06);flex-shrink:0;';
 
     var bg = document.createElement('div');
     bg.style.cssText = 'position:absolute;inset:0;display:grid;grid-template-columns:repeat('+GRID+','+cellSz+'px);gap:'+GAP+'px;padding:'+PAD+'px;box-sizing:border-box;';

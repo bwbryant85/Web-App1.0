@@ -34,7 +34,7 @@ function initAppStore() {
   const CATS = ['All', 'Games', 'Productivity', 'Tools', 'Utilities', 'Creative', 'Info'];
 
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;background:#050508;overflow:hidden;';
+  wrap.className = 'store98-wrap';
   content.appendChild(wrap);
 
   /* Header */
@@ -116,10 +116,11 @@ function initAppStore() {
     filtered.forEach(app => {
       const isInstalled = installed.has(app.id);
       const card = document.createElement('div');
+      card.className = 'store98-item';
       card.style.cssText = [
         'display:flex;align-items:center;gap:14px;',
-        'padding:12px 14px;border-radius:18px;',
-        'background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);',
+        'padding:10px 12px;border-radius:10px;',
+        'background:rgba(255,255,255,.08);border:2px solid var(--win-chrome-dark);',
         'transition:background .15s;',
       ].join('');
 

@@ -2,7 +2,7 @@
 function initClock() {
   let timer = null;
   const wrap = document.createElement('div');
-  wrap.className = 'clk-wrap';
+  wrap.className = 'clock98-wrap';
   content.appendChild(wrap);
 
   const trans = builder => {

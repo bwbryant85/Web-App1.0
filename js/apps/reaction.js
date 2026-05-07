@@ -17,7 +17,7 @@ function initReaction() {
   const rate = ms => RATINGS.find(r => ms < r[0]);
 
   const render = (bg, main, mc, sub, showR) => {
-    wrap.style.background = bg || '#050508';
+    wrap.style.background = bg || 'var(--win-chrome)';
     let h = `
       <div style="font-family:'Share Tech Mono',monospace;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)">ROUND ${round}/${MAX_R}</div>
       <div class="react-big" style="color:${mc || 'var(--cyan)'}">${main}</div>

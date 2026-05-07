@@ -37,6 +37,8 @@ function initFileSystem98() { makeFullWrap(); return initFileSystem(); }
 function initAppStore98()   { makeFullWrap(); return initAppStore(); }
 function initDeviceInfo98() { makeFullWrap(); return initDeviceInfo(); }
 function initBenchmark98()  { makeFullWrap(); return initBenchmark(); }
+function initBrowser98()     { makeFullWrap(); return initBrowser(); }
+function initPaint98()       { makeFullWrap(); return initPaint(); }
 
 function initTimer98() {
   const c = window.content;

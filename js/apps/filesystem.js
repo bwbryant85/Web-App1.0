@@ -3,12 +3,17 @@ function initFileSystem() {
   POS.trackAppOpen('filesystem');
 
   const wrap = document.createElement('div');
-  wrap.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;background:#050508;overflow:hidden;';
+  wrap.className = 'files98-wrap';
   content.appendChild(wrap);
+
+  const menu = document.createElement('div');
+  menu.className = 'win-menubar';
+  menu.innerHTML = '<div class="win-menu-item">File</div><div class="win-menu-item">Edit</div><div class="win-menu-item">View</div>';
+  wrap.appendChild(menu);
 
   /* ── Header ── */
   const hdr = document.createElement('div');
-  hdr.style.cssText = 'flex-shrink:0;padding:8px 18px 12px;border-bottom:1px solid rgba(255,255,255,.06);';
+  hdr.style.cssText = 'flex-shrink:0;padding:8px 18px 12px;border-bottom:1px solid rgba(0,0,0,.08);background:var(--win-chrome);';
   wrap.appendChild(hdr);
 
   const breadcrumb = document.createElement('div');
@@ -33,7 +38,7 @@ function initFileSystem() {
   const FS = {
     '/': {
       type: 'dir',
-      children: ['documents', 'games', 'system'],
+      children: ['documents', 'games', 'system', 'readme.txt', 'todo.txt'],
     },
     '/documents': {
       type: 'dir',
@@ -111,6 +116,22 @@ function initFileSystem() {
         ];
       },
     },
+    '/readme.txt': {
+      type: 'file',
+      ico: '📄',
+      name: 'README.txt',
+      size: '1.2 KB',
+      modified: 'today',
+      preview: 'Welcome to iPOCKET!\n\nUse the Files app to browse notes, game saves, and system files. This is a retro-inspired pocket OS shell built with HTML, CSS, and JavaScript.',
+    },
+    '/todo.txt': {
+      type: 'file',
+      ico: '📝',
+      name: 'TODO.txt',
+      size: '320 B',
+      modified: 'today',
+      preview: '- Add drag reorder for home icons\n- Fix paint palette and drawing coordinates\n- Improve browser fallback support\n- Theme Files and App Store in Win98 style',
+    },
   };
 
   /* ── Navigation ── */
@@ -161,6 +182,11 @@ function initFileSystem() {
     body.innerHTML = '';
     const node = FS[currentPath];
     if (!node) return;
+
+    if (node.type === 'file') {
+      showFilePreview(node);
+      return;
+    }
 
     if (node.type === 'dir') {
       node.children.forEach((child, i) => {

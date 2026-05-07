@@ -29,6 +29,12 @@ function initGames98() {
     { id:'casino',   name:'Casino',   ico:'🎰', color:'#600040' },
   ];
 
+  GAMES.forEach(game => {
+    if (!APP_LOOKUP[game.id]) {
+      APP_LOOKUP[game.id] = { id: game.id, name: game.name, ico: game.ico, stub:false };
+    }
+  });
+
   const list = document.createElement('div');
   list.className = 'games98-list win-scroll';
 

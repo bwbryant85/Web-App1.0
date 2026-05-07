@@ -7,6 +7,7 @@
 /* ── HAPTICS ─────────────────────────────────────────────── */
 let _hac = null;
 window.haptic = function(type) {
+  if (localStorage.getItem('ipocket_sound') === '0') return;
   type = type || 'light';
   if (navigator.vibrate) {
     const p = {light:8,medium:18,heavy:40,success:[8,30,8],error:[30,15,30]};
@@ -44,7 +45,7 @@ const APP_PAGES = [
     {id:'ascii',      name:'ASCII Cam',   ico:'📸',  stub:false},
     {id:'settings',   name:'Settings',    ico:'⚙️',  stub:false},
     {id:'music',      name:'Music',       ico:'🎵',  stub:'Coming Soon'},
-    {id:'paint',      name:'Paint',       ico:'🎨',  stub:'Coming Soon'},
+    {id:'paint',      name:'Paint',       ico:'🎨',  stub:false},
     {id:'idcard',     name:'ID Card',     ico:'🪪',  stub:'Coming Soon'},
     {id:'videos',     name:'Videos',      ico:'🎬',  stub:'Coming Soon'},
     {id:'tasks',      name:'Tasks',       ico:'✅',  stub:'Coming Soon'},
@@ -65,7 +66,7 @@ const APP_PAGES = [
     {id:'screensaver', name:'Screensaver', ico:'🌊',  stub:false},
     {id:'contacts',   name:'Contacts',    ico:'👤',  stub:'Coming Soon'},
     {id:'messages',   name:'Messages',    ico:'💬',  stub:'Coming Soon'},
-    {id:'browser',    name:'Browser',     ico:'🌐',  stub:'Coming Soon'},
+    {id:'browser',    name:'Browser',     ico:'🌐',  stub:false},
     {id:'gallery',    name:'Gallery',     ico:'🖼️',  stub:false},
     {id:'clock',      name:'Clock',       ico:'🕐',  stub:false},
     {id:'assistant',  name:'Assistant',   ico:'🤖',  stub:false},
@@ -98,6 +99,129 @@ const HIDDEN_APPS = [
 ];
 HIDDEN_APPS.forEach(a => { APP_LOOKUP[a.id] = a; });
 
+const STORE_APP_IDS = ['assistant','terminal','filesystem','clock','weather','timer','notes','sports','casino','snake','flappy','pong','breakout','simon','reaction','colorgame','g2048','pacman','deviceinfo','benchmark','gyro','ascii','djpad','visualizer','particles','screensaver'];
+const HOME_ORDER_KEY = 'ipocket_home_order';
+let HOME_ORDER = loadHomeOrder();
+
+function loadHomeOrder() {
+  try { return JSON.parse(localStorage.getItem(HOME_ORDER_KEY) || '{}'); } catch (e) { return {}; }
+}
+
+function saveHomeOrder() {
+  try { localStorage.setItem(HOME_ORDER_KEY, JSON.stringify(HOME_ORDER)); } catch(e) {}
+}
+
+function getOrderedApps(apps, pageIdx) {
+  const order = HOME_ORDER[pageIdx] || apps.map(a => a.id);
+  return apps.slice().sort((a, b) => {
+    const ai = order.indexOf(a.id);
+    const bi = order.indexOf(b.id);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+}
+
+window.homeEditEnabled = localStorage.getItem('ipocket_home_edit') !== '0';
+const homeDragState = {
+  timer: null,
+  dragging: false,
+  target: null,
+  dragEl: null,
+  placeholder: null,
+  pageIdx: null,
+  startX: 0,
+  startY: 0,
+};
+
+function clearHomeDragTimer() {
+  if (homeDragState.timer) {
+    clearTimeout(homeDragState.timer);
+    homeDragState.timer = null;
+  }
+}
+
+function endHomeDrag() {
+  if (!homeDragState.dragging) return;
+  homeDragState.dragging = false;
+  document.removeEventListener('pointermove', handleHomeDragMove);
+  document.removeEventListener('pointerup', handleHomeDragUp);
+  if (homeDragState.dragEl) homeDragState.dragEl.remove();
+  if (homeDragState.placeholder) {
+    const grid = homeDragState.placeholder.parentNode;
+    if (grid) {
+      const ids = Array.from(grid.querySelectorAll('.app-icon'))
+        .filter(el => !el.classList.contains('placeholder'))
+        .map(el => el.dataset.appId)
+        .filter(Boolean);
+      HOME_ORDER[homeDragState.pageIdx] = ids;
+      saveHomeOrder();
+      buildGrid();
+    }
+    homeDragState.placeholder.remove();
+  }
+  if (homeDragState.target) {
+    homeDragState.target.style.visibility = '';
+  }
+  homeDragState.target = null;
+  homeDragState.dragEl = null;
+  homeDragState.placeholder = null;
+  homeDragState.pageIdx = null;
+}
+
+function handleHomeDragUp() {
+  clearHomeDragTimer();
+  endHomeDrag();
+}
+
+function beginHomeDrag(e, icon, pageIdx) {
+  if (!window.homeEditEnabled) return;
+  homeDragState.dragging = true;
+  homeDragState.timer = null;
+  homeDragState.pageIdx = pageIdx;
+  homeDragState.target = icon;
+  const rect = icon.getBoundingClientRect();
+  const clone = icon.cloneNode(true);
+  clone.classList.add('dragging');
+  clone.style.position = 'fixed';
+  clone.style.left = rect.left + 'px';
+  clone.style.top = rect.top + 'px';
+  clone.style.width = rect.width + 'px';
+  clone.style.height = rect.height + 'px';
+  clone.style.pointerEvents = 'none';
+  clone.style.opacity = '0.92';
+  clone.style.transform = 'scale(1.05)';
+  clone.style.zIndex = 1000;
+  document.body.appendChild(clone);
+  homeDragState.dragEl = clone;
+  const placeholder = document.createElement('div');
+  placeholder.className = 'app-icon placeholder';
+  placeholder.style.width = rect.width + 'px';
+  placeholder.style.height = rect.height + 'px';
+  icon.parentNode.insertBefore(placeholder, icon);
+  icon.style.visibility = 'hidden';
+  homeDragState.placeholder = placeholder;
+  document.addEventListener('pointermove', handleHomeDragMove, { passive: false });
+  document.addEventListener('pointerup', handleHomeDragUp);
+}
+
+function handleHomeDragMove(e) {
+  if (!homeDragState.dragging || !homeDragState.dragEl) return;
+  e.preventDefault();
+  const rect = homeDragState.dragEl.getBoundingClientRect();
+  homeDragState.dragEl.style.left = e.clientX - rect.width / 2 + 'px';
+  homeDragState.dragEl.style.top = e.clientY - rect.height / 2 + 'px';
+  const over = document.elementFromPoint(e.clientX, e.clientY);
+  if (!over) return;
+  const icon = over.closest('.app-icon:not(.placeholder)');
+  if (icon && icon.parentNode === homeDragState.placeholder.parentNode && icon !== homeDragState.target) {
+    const iconRect = icon.getBoundingClientRect();
+    const after = e.clientX > iconRect.left + iconRect.width / 2;
+    icon.parentNode.insertBefore(homeDragState.placeholder, after ? icon.nextSibling : icon);
+  }
+}
+
 /* ── OPEN APP FUNCTIONS ──────────────────────────────────── */
 const APP_INIT = {
   clock:        () => initClock98(),
@@ -113,6 +237,8 @@ const APP_INIT = {
   djpad:        () => initDJPad98(),
   visualizer:   () => initVisualizer98(),
   ascii:        () => initASCII98(),
+  browser:      () => initBrowser98(),
+  paint:        () => initPaint98(),
   screensaver:  () => initScreensaver98(),
   sparks:       () => initParticles98(),
   gyro:         () => initGyro98(),
@@ -157,17 +283,39 @@ window.OS = {
     const meta = APP_LOOKUP[appId];
     if (!meta) return;
 
-    // Stub apps
-    if (meta.stub) {
-      showToast98('Coming Soon', meta.name + ' is not available yet.', '⚠️');
-      return;
-    }
-
     // If already open, focus it
     const existing = openWindows.find(w => w.appId === appId);
     if (existing) {
       bringToFront(existing);
       updateTaskbar();
+      updateSwitcher();
+      updateXPStrip();
+      return;
+    }
+
+    // Stub apps open a placeholder window instead of rejecting them
+    if (meta.stub) {
+      const win = createWindow98(meta);
+      openWindows.push(win);
+      updateTaskbar();
+      updateSwitcher();
+      updateXPStrip();
+      window.content = win.body;
+      win.body.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;';
+      const menu = document.createElement('div');
+      menu.className = 'win-menubar';
+      menu.innerHTML = '<div class="win-menu-item">Info</div>';
+      win.body.appendChild(menu);
+      const placeholder = document.createElement('div');
+      placeholder.className = 'placeholder98';
+      placeholder.innerHTML = `
+        <div class="placeholder98-ico">🛠️</div>
+        <div class="placeholder98-title">${meta.name} is coming soon</div>
+        <div class="placeholder98-msg">This app is not built yet, but it will appear in iPOCKET soon. Close this window and check back later.</div>
+        <button class="btn98 primary" onclick="OS.closeApp('${win.id}')">Close</button>
+      `;
+      win.body.appendChild(placeholder);
+      POS.trackAppOpen(appId);
       return;
     }
 
@@ -182,8 +330,26 @@ window.OS = {
 
     // Init app inside window body
     window.content = win.body;
-    const initFn = APP_INIT[appId];
-    win.cleanup = initFn ? initFn() : null;
+    
+    // Load theme-specific app script if it exists and theme is not retro
+    if (currentTheme !== 'retro') {
+      const themeScript = document.createElement('script');
+      themeScript.src = `js/themes/${currentTheme}/apps/${appId}.js`;
+      themeScript.onload = () => {
+        // Now call the init function (theme-specific version if loaded)
+        const initFn = APP_INIT[appId];
+        win.cleanup = initFn ? initFn() : null;
+      };
+      themeScript.onerror = () => {
+        // Fallback to default if theme-specific doesn't exist
+        const initFn = APP_INIT[appId];
+        win.cleanup = initFn ? initFn() : null;
+      };
+      document.head.appendChild(themeScript);
+    } else {
+      const initFn = APP_INIT[appId];
+      win.cleanup = initFn ? initFn() : null;
+    }
 
     // Notify
     POS.addXP(2,'app_open');
@@ -343,7 +509,21 @@ function createWindow98(meta) {
     <div class="win-body" id="${id}-body"></div>
   `;
 
-  el.querySelector('[data-close]').addEventListener('click', () => OS.closeApp(id));
+  const controls = el.querySelectorAll('.win-controls button');
+  const minBtn = controls[0];
+  const maxBtn = controls[1];
+  const closeBtn = controls[2];
+
+  minBtn.addEventListener('click', () => {
+    el.style.display = 'none';
+    updateTaskbar();
+  });
+  maxBtn.addEventListener('click', () => {
+    el.style.display = 'flex';
+    bringToFront({ id, appId: meta.id, el, body: el.querySelector(`#${id}-body`), cleanup: null });
+    updateTaskbar();
+  });
+  closeBtn.addEventListener('click', () => OS.closeApp(id));
 
   document.getElementById('windows-layer').appendChild(el);
   requestAnimationFrame(() => el.classList.add('win-open'));
@@ -368,17 +548,18 @@ function updateTaskbar() {
   openWindows.forEach(win => {
     const meta = APP_LOOKUP[win.appId] || {name: win.appId, ico:'📦'};
     const btn = document.createElement('button');
-    btn.className = 'taskbar-app-btn active';
+    const hidden = window.getComputedStyle(win.el).display === 'none';
+    btn.className = hidden ? 'taskbar-app-btn' : 'taskbar-app-btn active';
     btn.innerHTML = `${meta.ico} ${meta.name}`;
     btn.onclick = () => {
-      if (win.el.classList.contains('win-open')) {
-        // Minimize (hide)
-        win.el.style.display = 'none';
-        btn.classList.remove('active');
-      } else {
+      const hiddenNow = window.getComputedStyle(win.el).display === 'none';
+      if (hiddenNow) {
         win.el.style.display = 'flex';
         bringToFront(win);
         btn.classList.add('active');
+      } else {
+        win.el.style.display = 'none';
+        btn.classList.remove('active');
       }
     };
     bar.appendChild(btn);
@@ -428,6 +609,7 @@ function updateXPStrip() {
 const NOTIFICATIONS = [];
 
 function pushNotification(title, msg, ico, time) {
+  if (localStorage.getItem('ipocket_notifs') === '0') return;
   const now = time || new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   NOTIFICATIONS.unshift({title, msg, ico: ico||'📢', time: now});
   renderNotifList();
@@ -466,6 +648,7 @@ window.showToast98 = function(title, msg, ico) {
   if (!t) {
     t = document.createElement('div');
     t.className = 'toast98';
+    t.onclick = () => { t.classList.remove('show'); clearTimeout(toastTimer); };
     document.body.appendChild(t);
   }
   t.innerHTML = `
@@ -474,7 +657,10 @@ window.showToast98 = function(title, msg, ico) {
   `;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  toastTimer = setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 250);
+  }, 5000);
 };
 
 // Compat bridge: old apps call showToast(), map to showToast98
@@ -573,19 +759,45 @@ setInterval(updateClock, 5000);
 
 /* ── BUILD HOME GRID ─────────────────────────────────────── */
 function buildGrid() {
+  const installed = POS.getInstalledApps();
   APP_PAGES.forEach((apps, pageIdx) => {
     const pageEl = document.getElementById('page-'+pageIdx);
     if (!pageEl) return;
     pageEl.innerHTML = '';
     const grid = document.createElement('div');
     grid.className = 'icon-grid';
-    apps.forEach(app => {
+    const pageApps = apps.filter(app => !(installed && !installed.includes(app.id) && STORE_APP_IDS.includes(app.id)));
+    const orderedApps = getOrderedApps(pageApps, pageIdx);
+    orderedApps.forEach(app => {
       const icon = document.createElement('div');
       icon.className = 'app-icon';
+      icon.dataset.appId = app.id;
+      icon.dataset.pageIdx = pageIdx;
       icon.innerHTML = `<div class="icon-img">${app.ico}</div><div class="icon-label">${app.name}</div>`;
       icon.addEventListener('click', () => {
+        if (homeDragState.dragging) return;
         haptic('light');
         OS.openApp(app.id);
+      });
+      icon.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        homeDragState.startX = e.clientX;
+        homeDragState.startY = e.clientY;
+        homeDragState.target = icon;
+        homeDragState.pageIdx = pageIdx;
+        homeDragState.timer = setTimeout(() => beginHomeDrag(e, icon, pageIdx), 150);
+      });
+      icon.addEventListener('pointermove', (e) => {
+        if (!homeDragState.timer) return;
+        const dx = e.clientX - homeDragState.startX;
+        const dy = e.clientY - homeDragState.startY;
+        if (Math.hypot(dx, dy) > 10) clearHomeDragTimer();
+      });
+      icon.addEventListener('pointerup', () => {
+        clearHomeDragTimer();
+      });
+      icon.addEventListener('pointercancel', () => {
+        clearHomeDragTimer();
       });
       grid.appendChild(icon);
     });
@@ -636,7 +848,7 @@ window.closeApp = function() {
 /* ── STATE.js showToast bridge already handled above ─────── */
 
 /* ── More compat shims ─────────────────────────────────── */
-window._rebuildGrid = function() {};
+window._rebuildGrid = function() { buildGrid(); };
 
 /* ── SA shim: old apps use SA.t/b/l/r for safe area insets ──
    In v8 apps run inside win-body windows so all insets are 0  */

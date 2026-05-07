@@ -14,6 +14,16 @@ function initSettings98() {
   c.appendChild(wrap);
 
   const s = POS.get();
+  const getSetting = (key, def) => {
+    const value = localStorage.getItem('ipocket_' + key);
+    return value === null ? def : value === '1';
+  };
+  const setSetting = (key, value) => {
+    localStorage.setItem('ipocket_' + key, value ? '1' : '0');
+  };
+
+  document.body.classList.toggle('auto-bright', getSetting('auto_brightness', false));
+  window.homeEditEnabled = getSetting('home_edit', true);
 
   const rows = [
     {
@@ -22,9 +32,10 @@ function initSettings98() {
       value: OS.getTheme(),
       onChange(v) { OS.applyTheme(v); }
     },
-    { label: 'Sound', type: 'toggle', value: true, onChange(v){} },
-    { label: 'Notifications', type: 'toggle', value: true, onChange(v){} },
-    { label: 'Auto Brightness', type: 'toggle', value: false, onChange(v){} },
+    { label: 'Sound', type: 'toggle', value: getSetting('sound', true), onChange(v) { setSetting('sound', v); showToast98('Sound', v ? 'Enabled' : 'Disabled'); } },
+    { label: 'Notifications', type: 'toggle', value: getSetting('notifs', true), onChange(v) { setSetting('notifs', v); showToast98('Notifications', v ? 'Enabled' : 'Disabled'); } },
+    { label: 'Auto Brightness', type: 'toggle', value: getSetting('auto_brightness', false), onChange(v) { setSetting('auto_brightness', v); document.body.classList.toggle('auto-bright', v); } },
+    { label: 'Home Edit Mode', type: 'toggle', value: getSetting('home_edit', true), onChange(v) { setSetting('home_edit', v); window.homeEditEnabled = v; } },
   ];
 
   rows.forEach(row => {
@@ -97,7 +108,6 @@ function initSettings98() {
       previews.querySelectorAll('div>div').forEach(f => f.style.outline='none');
       frame.style.outline = '3px solid var(--win-select)';
       frame.style.outlineOffset = '2px';
-      // Update the select control
       const sel = wrap.querySelector('select');
       if (sel) sel.value = t.id;
     };
