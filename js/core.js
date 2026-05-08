@@ -348,8 +348,9 @@ function applyTheme(theme) {
       // Re-init each open window's content with new theme
       openWindows.forEach(win => {
         const appId = win.appId;
-        // Clear existing content
+        // Clear existing content and any inline styles left by previous theme's app scripts
         if (win.cleanup) { try { win.cleanup(); } catch(e) {} win.cleanup = null; }
+        win.body.style.cssText = '';
         win.body.innerHTML = '';
         window.content = win.body;
 
@@ -362,6 +363,13 @@ function applyTheme(theme) {
             win.el.style.transform  = 'scale(1)';
             win.el.style.opacity    = '1';
             win.el.style.filter     = 'blur(0px)';
+            // After morph-in, remove inline overrides so pure CSS theme rules apply cleanly
+            setTimeout(() => {
+              win.el.style.transition = '';
+              win.el.style.transform  = '';
+              win.el.style.opacity    = '';
+              win.el.style.filter     = '';
+            }, MORPH_IN + 60);
           });
         };
 
