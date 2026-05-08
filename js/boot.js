@@ -36,7 +36,7 @@
   let done = false;
   let canSkip = false;
 
-  setTimeout(() => { skipEl.classList.add('show'); canSkip = true; }, 1500);
+  setTimeout(() => { skipEl.classList.add('show'); canSkip = true; }, 600);
 
   function finish() {
     if (done) return;
@@ -64,7 +64,7 @@
   let logIdx = 0;
   function tick() {
     if (done) return;
-    pct += 1.6 + Math.random() * 2.8;
+    pct += 4 + Math.random() * 6;
     if (pct >= 100) { finish(); return; }
 
     // Update bar (block-style)
@@ -79,7 +79,7 @@
       logIdx++;
     }
 
-    setTimeout(tick, 45 + Math.random() * 30);
+    setTimeout(tick, 18 + Math.random() * 14);
   }
 
   tick();

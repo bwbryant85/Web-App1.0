@@ -34,6 +34,7 @@ function initSettings98() {
     },
     { label: 'Sound', type: 'toggle', value: getSetting('sound', true), onChange(v) { setSetting('sound', v); showToast98('Sound', v ? 'Enabled' : 'Disabled'); } },
     { label: 'Notifications', type: 'toggle', value: getSetting('notifs', true), onChange(v) { setSetting('notifs', v); showToast98('Notifications', v ? 'Enabled' : 'Disabled'); } },
+    { label: 'Receive Messages', type: 'toggle', value: getSetting('receive_messages', true), onChange(v) { setSetting('receive_messages', v); if (v) { if (window.MSG) MSG.connect(); } else { if (window.MSG) MSG.disconnect(); } showToast98('Messages', v ? 'Receiving messages' : 'Messages paused'); } },
     { label: 'Auto Brightness', type: 'toggle', value: getSetting('auto_brightness', false), onChange(v) { setSetting('auto_brightness', v); document.body.classList.toggle('auto-bright', v); } },
     { label: 'Home Edit Mode', type: 'toggle', value: getSetting('home_edit', true), onChange(v) { setSetting('home_edit', v); window.homeEditEnabled = v; } },
   ];

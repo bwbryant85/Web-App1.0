@@ -210,17 +210,21 @@ body.theme-modern .win-titlebar::after{
 body.theme-modern .win-titlebar-text{color:#111;font-family:var(--pixel-font);font-size:15px;font-weight:600;}
 body.theme-modern .win-btn{
   border-radius:999px;
-  width:14px;height:14px;
-  border:0.5px solid rgba(0,0,0,.15);
+  /* 44×44 full touch target; 14px colored dot via content-box clip */
+  width:44px;height:44px;
+  box-sizing:border-box;
+  padding:15px;
+  background-clip:content-box;
+  border:0.5px solid transparent;
   color:transparent;font-size:0;overflow:hidden;
   transition:transform .15s ease,filter .15s ease;
   flex-shrink:0;
 }
-body.theme-modern .win-controls{gap:8px;margin-right:4px;}
+body.theme-modern .win-controls{gap:0px;margin-right:0;}
 /* macOS-style: minimize=yellow, maximize=green, close=red */
-body.theme-modern .win-btn:nth-child(1){background:#febc2e;border-color:rgba(196,134,0,.4);}
-body.theme-modern .win-btn:nth-child(2){background:#28c840;border-color:rgba(0,148,0,.4);}
-body.theme-modern .win-btn:nth-child(3){background:#ff5f57;border-color:rgba(196,0,0,.4);}
+body.theme-modern .win-btn:nth-child(1){background-color:#febc2e;}
+body.theme-modern .win-btn:nth-child(2){background-color:#28c840;}
+body.theme-modern .win-btn:nth-child(3){background-color:#ff5f57;}
 body.theme-modern .win-btn:active{transform:scale(.82);filter:brightness(.85);}
 body.theme-modern .win-toolbar, body.theme-modern .win-menubar, body.theme-modern .win-statusbar{background:rgba(255,255,255,.55);border:none;box-shadow:none;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
 body.theme-modern .win-body{background:rgba(248,250,255,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}

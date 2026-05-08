@@ -64,8 +64,8 @@ const APP_PAGES = [
     {id:'snake',      name:'Snake',       ico:'🐍',  stub:false},
     {id:'casino',     name:'Casino',      ico:'🎰',  stub:false},
     {id:'screensaver', name:'Screensaver', ico:'🌊',  stub:false},
-    {id:'contacts',   name:'Contacts',    ico:'👤',  stub:'Coming Soon'},
-    {id:'messages',   name:'Messages',    ico:'💬',  stub:'Coming Soon'},
+    {id:'contacts',   name:'Contacts',    ico:'👤',  stub:false},
+    {id:'messages',   name:'Messages',    ico:'💬',  stub:false},
     {id:'browser',    name:'Browser',     ico:'🌐',  stub:false},
     {id:'gallery',    name:'Gallery',     ico:'🖼️',  stub:false},
     {id:'clock',      name:'Clock',       ico:'🕐',  stub:false},
@@ -259,6 +259,8 @@ const APP_INIT = {
   achievements: () => initAchievements98(),
   games:        () => initGames98(),
   debug:        () => initDebug98(),
+  messages:     () => initMessages98(),
+  contacts:     () => initContacts98(),
 };
 
 /* ── OS SHELL ────────────────────────────────────────────── */
