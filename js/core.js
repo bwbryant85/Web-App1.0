@@ -336,63 +336,20 @@ function applyTheme(theme) {
     if (theme === 'hacker') document.body.classList.add('theme-hacker');
     if (theme === 'modern')  document.body.classList.add('theme-modern');
 
-    // Morph phase 1: shrink + blur all open windows
-    const MORPH_OUT = 220;
-    const MORPH_IN  = 280;
-    openWindows.forEach(win => {
-      win.el.style.transition = `transform ${MORPH_OUT}ms cubic-bezier(.4,0,.6,1), opacity ${MORPH_OUT}ms ease, filter ${MORPH_OUT}ms ease`;
-      win.el.style.transform  = 'scale(.88)';
-      win.el.style.opacity    = '0';
-      win.el.style.filter     = 'blur(8px)';
+    // Close all open windows cleanly — prevents stale themed UI after switch
+    [...openWindows].forEach(win => {
+      if (win.cleanup) { try { win.cleanup(); } catch(e) {} }
+      win.el.remove();
     });
+    openWindows.length = 0;
+    updateTaskbar();
+    updateSwitcher();
+    if (typeof updateXPStrip === 'function') updateXPStrip();
 
-    setTimeout(() => {
-      // Re-init each open window's content with new theme
-      openWindows.forEach(win => {
-        const appId = win.appId;
-        // Clear existing content and any inline styles left by previous theme's app scripts
-        if (win.cleanup) { try { win.cleanup(); } catch(e) {} win.cleanup = null; }
-        win.body.style.cssText = '';
-        win.body.innerHTML = '';
-        window.content = win.body;
-
-        const doInit = () => {
-          const initFn = APP_INIT[appId];
-          win.cleanup = initFn ? initFn() || null : null;
-          // Morph phase 2: expand back in
-          requestAnimationFrame(() => {
-            win.el.style.transition = `transform ${MORPH_IN}ms cubic-bezier(.34,1.56,.64,1), opacity ${MORPH_IN}ms ease, filter ${MORPH_IN}ms ease`;
-            win.el.style.transform  = 'scale(1)';
-            win.el.style.opacity    = '1';
-            win.el.style.filter     = 'blur(0px)';
-            // After morph-in, remove inline overrides so pure CSS theme rules apply cleanly
-            setTimeout(() => {
-              win.el.style.transition = '';
-              win.el.style.transform  = '';
-              win.el.style.opacity    = '';
-              win.el.style.filter     = '';
-            }, MORPH_IN + 60);
-          });
-        };
-
-        if (theme !== 'retro') {
-          loadAppScript(`js/themes/${theme}/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
-        } else {
-          // Retro: reload the base script to reset the function to default
-          loadAppScript(`js/apps/${appId}.js?t=${Date.now()}`, appId, theme, doInit);
-        }
-      });
-
-      // If no windows open, still apply class (already done above)
-      if (openWindows.length === 0) {
-        // nothing extra needed
-      }
-
-      // Fade out overlay
-      ov.style.transition = 'opacity 1s ease';
-      ov.style.opacity = '0';
-      setTimeout(() => ov.remove(), 1000);
-    }, MORPH_OUT);
+    // Fade out overlay
+    ov.style.transition = 'opacity 1s ease';
+    ov.style.opacity = '0';
+    setTimeout(() => ov.remove(), 1000);
   }, 1500);
 }
 

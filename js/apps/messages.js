@@ -31,10 +31,6 @@ function initMessages98() {
       btn.disabled = true; btn.textContent = 'Registering…';
       try {
         const res = await MSG.register(val);
-        if (res.error === 'server_unavailable') {
-          err.textContent = 'Server unavailable — messaging only works on the live Replit app.';
-          btn.disabled = false; btn.textContent = 'Set Username'; return;
-        }
         if (res.ok) {
           MSG.setUsername(val); MSG.connect();
           c.innerHTML = '';
@@ -45,7 +41,7 @@ function initMessages98() {
           btn.disabled = false; btn.textContent = 'Set Username';
         }
       } catch(e) {
-        err.textContent = 'Server unavailable. Use the Replit-hosted version.';
+        err.textContent = 'Connection error — check internet and try again.';
         btn.disabled = false; btn.textContent = 'Set Username';
       }
     }
@@ -58,7 +54,6 @@ function initMessages98() {
   function buildMain() {
     const me = MSG.getUsername();
 
-    // Menubar
     const menu = document.createElement('div');
     menu.className = 'win-menubar';
     menu.innerHTML = '<div class="win-menu-item">File</div><div class="win-menu-item">View</div><div class="win-menu-item">Help</div>';
@@ -102,7 +97,8 @@ function initMessages98() {
     body.appendChild(chatPanel);
 
     let currentChat = null;
-    let unsub       = null;
+    let unsubList   = null; // global list listener
+    let unsubChat   = null; // per-chat subscription
 
     /* ── Load conversations ── */
     async function loadConvs() {
@@ -140,6 +136,9 @@ function initMessages98() {
       partner = partner.trim().toLowerCase();
       if (!partner || partner === me) return;
       currentChat = partner;
+
+      // Clean up previous chat subscription
+      if (unsubChat) { unsubChat(); unsubChat = null; }
       chatPanel.innerHTML = '';
 
       const chatHead = document.createElement('div');
@@ -168,11 +167,17 @@ function initMessages98() {
       chatHead.querySelector('#chat-back').addEventListener('click', () => {
         chatPanel.style.transform = 'translateX(100%)';
         currentChat = null;
-        if (unsub) { unsub(); unsub = null; }
+        if (unsubChat) { unsubChat(); unsubChat = null; }
         loadConvs();
       });
 
+      /* Track shown IDs to deduplicate Gun.js events */
+      const shownIds = new Set();
+
       function addBubble(msg) {
+        if (!msg || !msg.id || !msg.text) return;
+        if (shownIds.has(msg.id)) return;
+        shownIds.add(msg.id);
         const mine = msg.from_user === me;
         const row  = document.createElement('div');
         row.style.cssText = `display:flex;flex-direction:column;align-items:${mine ? 'flex-end' : 'flex-start'};`;
@@ -190,7 +195,7 @@ function initMessages98() {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
 
-      // Load history
+      /* Load history (populates shownIds) */
       msgArea.innerHTML = '<div style="font-family:var(--pixel-font);font-size:.82rem;color:#808080;text-align:center;padding:8px;">Loading…</div>';
       let msgs = [];
       try { msgs = await MSG.getConversation(me, partner); } catch(e) {}
@@ -204,7 +209,7 @@ function initMessages98() {
         msgs.forEach(addBubble);
       }
 
-      // Send
+      /* Send */
       const chatInp  = chatPanel.querySelector('#chat-inp');
       const sendBtn  = chatPanel.querySelector('#chat-send');
       async function doSend() {
@@ -214,7 +219,14 @@ function initMessages98() {
         sendBtn.disabled = true;
         try {
           const res = await MSG.sendMessage(me, partner, text);
-          if (!res.ok) showToast98('❌ Error', res.error || 'Failed to send');
+          if (res.ok) {
+            // Remove "Say hello" placeholder if present
+            const em = msgArea.querySelector('div');
+            if (em && em.textContent.includes('Say hello')) em.remove();
+            addBubble(res.message); // show immediately, dedup handles Gun.js repeat
+          } else {
+            showToast98('❌ Error', res.error || 'Failed to send');
+          }
         } catch(e) { showToast98('❌ Error', 'Network error'); }
         sendBtn.disabled = false;
         chatInp.focus();
@@ -223,40 +235,36 @@ function initMessages98() {
       chatInp.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
       chatInp.focus();
 
-      // Real-time
-      if (unsub) unsub();
-      unsub = MSG.onNewMessage(msg => {
-        if ((msg.from_user === partner && msg.to_user === me) ||
-            (msg.from_user === me && msg.to_user === partner)) {
-          // Remove empty state if present
-          const empty = msgArea.querySelector('div:only-child');
-          if (empty && empty.textContent.includes('Say hello')) empty.remove();
-          addBubble(msg);
-        }
+      /* Real-time: subscribe AFTER history loaded so shownIds is pre-populated */
+      unsubChat = MSG.subscribeToConversation(me, partner, msg => {
+        const em = msgArea.querySelector('div');
+        if (em && em.textContent.includes('Say hello')) em.remove();
+        addBubble(msg);
       });
     }
 
-    // New chat from input bar
+    /* New chat from input bar */
     function goNewChat() {
       const to = listPanel.querySelector('#msg-to-inp').value.trim();
-      if (to) openChat(to);
+      if (to) { listPanel.querySelector('#msg-to-inp').value = ''; openChat(to); }
     }
     listPanel.querySelector('#msg-to-go').addEventListener('click', goNewChat);
     listPanel.querySelector('#msg-to-inp').addEventListener('keydown', e => { if (e.key === 'Enter') goNewChat(); });
 
-    // Listen globally for new messages to refresh conversation list
-    if (unsub) unsub();
-    unsub = MSG.onNewMessage(msg => {
+    /* Global listener: refresh conv list on any incoming message */
+    unsubList = MSG.onNewMessage(msg => {
       if (msg.to_user === me && !currentChat) loadConvs();
     });
 
     loadConvs();
 
-    // Check if opened via contacts "open with"
     const openWith = localStorage.getItem('ipocket_msg_open_with');
     if (openWith) { localStorage.removeItem('ipocket_msg_open_with'); openChat(openWith); }
 
-    return () => { if (unsub) { unsub(); unsub = null; } };
+    return () => {
+      if (unsubList) { unsubList(); unsubList = null; }
+      if (unsubChat) { unsubChat(); unsubChat = null; }
+    };
   }
 
   if (MSG.getUsername()) {

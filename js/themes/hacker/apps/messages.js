@@ -47,7 +47,7 @@ function initMessages98() {
           btn.disabled = false; btn.textContent = '[ REGISTER ]';
         }
       } catch(e) {
-        err.textContent = '> ERROR: network failure';
+        err.textContent = '> ERROR: connection failure';
         btn.disabled = false; btn.textContent = '[ REGISTER ]';
       }
     }
@@ -64,7 +64,6 @@ function initMessages98() {
     body.style.cssText = 'flex:1;overflow:hidden;position:relative;';
     c.appendChild(body);
 
-    /* ── List panel ── */
     const listPanel = document.createElement('div');
     listPanel.style.cssText = `position:absolute;inset:0;display:flex;flex-direction:column;background:${BG};transition:transform .28s ease;`;
     body.appendChild(listPanel);
@@ -95,13 +94,13 @@ function initMessages98() {
     statusBar.innerHTML = `<span style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:${DIM};">LOGGED IN · @${me}</span><span style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:${DIM};">iPOCKET MSG</span>`;
     listPanel.appendChild(statusBar);
 
-    /* ── Chat panel ── */
     const chatPanel = document.createElement('div');
     chatPanel.style.cssText = `position:absolute;inset:0;display:flex;flex-direction:column;background:${BG};transform:translateX(100%);transition:transform .28s cubic-bezier(.34,1.56,.64,1);`;
     body.appendChild(chatPanel);
 
     let currentChat = null;
-    let unsub = null;
+    let unsubList   = null;
+    let unsubChat   = null;
 
     async function loadConvs() {
       convScroll.innerHTML = `<div style="padding:14px;font-family:'Share Tech Mono',monospace;font-size:.75rem;color:${DIM};">> loading...</div>`;
@@ -118,10 +117,7 @@ function initMessages98() {
         row.innerHTML = `
           <div style="font-family:'Share Tech Mono',monospace;font-size:1rem;color:${GREEN};flex-shrink:0;">▶</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-family:'Share Tech Mono',monospace;font-size:.82rem;color:${GREEN};display:flex;align-items:center;gap:8px;">
-              @${cv.partner}
-              ${cv.unread > 0 ? `<span style="background:#003300;border:1px solid ${GREEN};color:${GREEN};font-size:.65rem;padding:1px 5px;">[${cv.unread}]</span>` : ''}
-            </div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:.82rem;color:${GREEN};">@${cv.partner}</div>
             <div style="font-family:'Share Tech Mono',monospace;font-size:.7rem;color:${DIM};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${cv.text || ''}</div>
           </div>
           <div style="font-family:'Share Tech Mono',monospace;font-size:.65rem;color:${DIM};flex-shrink:0;">${MSG.formatTime(cv.ts)}</div>
@@ -137,6 +133,8 @@ function initMessages98() {
       partner = partner.trim().toLowerCase();
       if (!partner || partner === me) return;
       currentChat = partner;
+
+      if (unsubChat) { unsubChat(); unsubChat = null; }
       chatPanel.innerHTML = '';
 
       const chatHdr = document.createElement('div');
@@ -166,11 +164,17 @@ function initMessages98() {
       chatHdr.querySelector('#chat-back').addEventListener('click', () => {
         chatPanel.style.transform = 'translateX(100%)';
         currentChat = null;
-        if (unsub) { unsub(); unsub = null; }
+        if (unsubChat) { unsubChat(); unsubChat = null; }
         loadConvs();
       });
 
+      /* Dedup set */
+      const shownIds = new Set();
+
       function addBubble(msg) {
+        if (!msg || !msg.id || !msg.text) return;
+        if (shownIds.has(msg.id)) return;
+        shownIds.add(msg.id);
         const mine = msg.from_user === me;
         const row  = document.createElement('div');
         row.style.cssText = `display:flex;flex-direction:column;align-items:${mine ? 'flex-end' : 'flex-start'};`;
@@ -192,6 +196,7 @@ function initMessages98() {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
 
+      /* Load history */
       msgArea.innerHTML = `<div style="font-size:.75rem;color:${DIM};text-align:center;padding:10px;">> loading transmission…</div>`;
       let msgs = [];
       try { msgs = await MSG.getConversation(me, partner); } catch(e) {}
@@ -207,15 +212,20 @@ function initMessages98() {
 
       const chatInp = chatPanel.querySelector('#chat-inp');
       const sendBtn = chatPanel.querySelector('#chat-send');
+
       async function doSend() {
         const text = chatInp.value.trim();
         if (!text) return;
         chatInp.value = '';
-        const em = msgArea.querySelector('div:only-child');
-        if (em && em.textContent.includes('awaiting')) em.remove();
         try {
           const res = await MSG.sendMessage(me, partner, text);
-          if (!res.ok) showToast98('ERROR', res.error || 'TX failed');
+          if (res.ok) {
+            const em = msgArea.querySelector('div:only-child');
+            if (em && em.textContent.includes('awaiting')) em.remove();
+            addBubble(res.message);
+          } else {
+            showToast98('ERROR', res.error || 'TX failed');
+          }
         } catch(e) { showToast98('ERROR', 'Network failure'); }
         chatInp.focus();
       }
@@ -223,14 +233,11 @@ function initMessages98() {
       chatInp.addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
       chatInp.focus();
 
-      if (unsub) unsub();
-      unsub = MSG.onNewMessage(msg => {
-        if ((msg.from_user === partner && msg.to_user === me) ||
-            (msg.from_user === me && msg.to_user === partner)) {
-          const em = msgArea.querySelector('div:only-child');
-          if (em && em.textContent.includes('awaiting')) em.remove();
-          addBubble(msg);
-        }
+      /* Real-time subscription */
+      unsubChat = MSG.subscribeToConversation(me, partner, msg => {
+        const em = msgArea.querySelector('div:only-child');
+        if (em && em.textContent.includes('awaiting')) em.remove();
+        addBubble(msg);
       });
     }
 
@@ -241,8 +248,7 @@ function initMessages98() {
     listPanel.querySelector('#msg-to-go').addEventListener('click', goNew);
     listPanel.querySelector('#msg-to-inp').addEventListener('keydown', e => { if (e.key === 'Enter') goNew(); });
 
-    if (unsub) unsub();
-    unsub = MSG.onNewMessage(msg => {
+    unsubList = MSG.onNewMessage(msg => {
       if (msg.to_user === me && !currentChat) loadConvs();
     });
 
@@ -251,7 +257,10 @@ function initMessages98() {
     const openWith = localStorage.getItem('ipocket_msg_open_with');
     if (openWith) { localStorage.removeItem('ipocket_msg_open_with'); openChat(openWith); }
 
-    return () => { if (unsub) { unsub(); unsub = null; } };
+    return () => {
+      if (unsubList) { unsubList(); unsubList = null; }
+      if (unsubChat) { unsubChat(); unsubChat = null; }
+    };
   }
 
   if (MSG.getUsername()) { buildMain(); } else { showSetup(buildMain); }

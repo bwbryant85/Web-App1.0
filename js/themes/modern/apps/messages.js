@@ -5,7 +5,7 @@ function initMessages98() {
   const c = window.content;
   c.style.cssText = 'width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;background:rgba(248,249,252,.95);border-radius:28px;';
 
-  const BLUE   = '#0B84FF';
+  const BLUE        = '#0B84FF';
   const BUBBLE_SENT = `background:${BLUE};color:#fff;border-radius:20px 20px 4px 20px;`;
   const BUBBLE_RECV = `background:rgba(255,255,255,.92);color:#111;border-radius:20px 20px 20px 4px;box-shadow:0 1px 4px rgba(15,23,42,.08);`;
 
@@ -44,7 +44,7 @@ function initMessages98() {
           btn.disabled = false; btn.textContent = 'Continue';
         }
       } catch(e) {
-        err.textContent = 'Network error. Is the server running?';
+        err.textContent = 'Connection error — check internet and try again.';
         btn.disabled = false; btn.textContent = 'Continue';
       }
     }
@@ -66,7 +66,6 @@ function initMessages98() {
     listPanel.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;transition:transform .32s cubic-bezier(.34,1,.64,1);';
     body.appendChild(listPanel);
 
-    // Header
     const hdr = document.createElement('div');
     hdr.style.cssText = 'flex-shrink:0;padding:16px 20px 10px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);';
     hdr.innerHTML = `
@@ -75,7 +74,6 @@ function initMessages98() {
     `;
     listPanel.appendChild(hdr);
 
-    // New message bar
     const newBar = document.createElement('div');
     newBar.style.cssText = 'flex-shrink:0;display:flex;gap:10px;padding:8px 16px 12px;';
     newBar.innerHTML = `
@@ -95,7 +93,8 @@ function initMessages98() {
     body.appendChild(chatPanel);
 
     let currentChat = null;
-    let unsub = null;
+    let unsubList   = null;
+    let unsubChat   = null;
 
     /* Load conversations */
     async function loadConvs() {
@@ -142,6 +141,8 @@ function initMessages98() {
       partner = partner.trim().toLowerCase();
       if (!partner || partner === me) return;
       currentChat = partner;
+
+      if (unsubChat) { unsubChat(); unsubChat = null; }
       chatPanel.innerHTML = '';
 
       const initial = partner.charAt(0).toUpperCase();
@@ -176,11 +177,17 @@ function initMessages98() {
       chatHdr.querySelector('#chat-back').addEventListener('click', () => {
         chatPanel.style.transform = 'translateX(100%)';
         currentChat = null;
-        if (unsub) { unsub(); unsub = null; }
+        if (unsubChat) { unsubChat(); unsubChat = null; }
         loadConvs();
       });
 
+      /* Dedup set — populated by history load, then real-time uses it too */
+      const shownIds = new Set();
+
       function addBubble(msg) {
+        if (!msg || !msg.id || !msg.text) return;
+        if (shownIds.has(msg.id)) return;
+        shownIds.add(msg.id);
         const mine  = msg.from_user === me;
         const group = document.createElement('div');
         group.style.cssText = `display:flex;flex-direction:column;align-items:${mine ? 'flex-end' : 'flex-start'};margin-bottom:2px;`;
@@ -195,7 +202,7 @@ function initMessages98() {
         msgArea.scrollTop = msgArea.scrollHeight;
       }
 
-      // Load history
+      /* Load history */
       msgArea.innerHTML = '<div style="font-family:\'Inter\',sans-serif;font-size:.88rem;color:#aaa;text-align:center;padding:20px;">Loading…</div>';
       let msgs = [];
       try { msgs = await MSG.getConversation(me, partner); } catch(e) {}
@@ -213,11 +220,10 @@ function initMessages98() {
         msgs.forEach(addBubble);
       }
 
-      // Send
+      /* Send */
       const chatInp = chatPanel.querySelector('#chat-inp');
       const sendBtn = chatPanel.querySelector('#chat-send');
 
-      // Auto-grow textarea
       chatInp.addEventListener('input', () => {
         chatInp.style.height = 'auto';
         chatInp.style.height = Math.min(chatInp.scrollHeight, 100) + 'px';
@@ -231,7 +237,13 @@ function initMessages98() {
         setTimeout(() => { sendBtn.style.transform = ''; }, 120);
         try {
           const res = await MSG.sendMessage(me, partner, text);
-          if (!res.ok) showToast98('Error', res.error || 'Failed to send');
+          if (res.ok) {
+            const em = msgArea.querySelector('div[style*="flex-direction:column"]');
+            if (em && em.textContent.includes('Say hello')) em.remove();
+            addBubble(res.message);
+          } else {
+            showToast98('Error', res.error || 'Failed to send');
+          }
         } catch(e) { showToast98('Error', 'Network error'); }
         chatInp.focus();
       }
@@ -239,19 +251,14 @@ function initMessages98() {
       chatInp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } });
       chatInp.focus();
 
-      // Real-time
-      if (unsub) unsub();
-      unsub = MSG.onNewMessage(msg => {
-        if ((msg.from_user === partner && msg.to_user === me) ||
-            (msg.from_user === me && msg.to_user === partner)) {
-          const emptyEl = msgArea.querySelector('div[style*="Say hello"]');
-          if (emptyEl) emptyEl.remove();
-          addBubble(msg);
-        }
+      /* Real-time subscription (fires after history loaded) */
+      unsubChat = MSG.subscribeToConversation(me, partner, msg => {
+        const em = msgArea.querySelector('div[style*="flex-direction:column"]');
+        if (em && em.textContent.includes('Say hello')) em.remove();
+        addBubble(msg);
       });
     }
 
-    // New chat
     function goNew() {
       const to = listPanel.querySelector('#msg-to-inp').value.trim();
       if (to) { listPanel.querySelector('#msg-to-inp').value = ''; openChat(to); }
@@ -259,9 +266,7 @@ function initMessages98() {
     listPanel.querySelector('#msg-to-go').addEventListener('click', goNew);
     listPanel.querySelector('#msg-to-inp').addEventListener('keydown', e => { if (e.key === 'Enter') goNew(); });
 
-    // Global new-message listener for badge refresh
-    if (unsub) unsub();
-    unsub = MSG.onNewMessage(msg => {
+    unsubList = MSG.onNewMessage(msg => {
       if (msg.to_user === me && !currentChat) loadConvs();
     });
 
@@ -270,12 +275,11 @@ function initMessages98() {
     const openWith = localStorage.getItem('ipocket_msg_open_with');
     if (openWith) { localStorage.removeItem('ipocket_msg_open_with'); openChat(openWith); }
 
-    return () => { if (unsub) { unsub(); unsub = null; } };
+    return () => {
+      if (unsubList) { unsubList(); unsubList = null; }
+      if (unsubChat) { unsubChat(); unsubChat = null; }
+    };
   }
 
-  if (MSG.getUsername()) {
-    buildMain();
-  } else {
-    showSetup(buildMain);
-  }
+  if (MSG.getUsername()) { buildMain(); } else { showSetup(buildMain); }
 }
