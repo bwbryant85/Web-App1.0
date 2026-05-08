@@ -661,9 +661,12 @@ function loadAppScript(src, appId, theme, callback) {
 
 function animateWindowToTaskbar(el, btn) {
   if (!btn || !el) return;
-  const rect = el.getBoundingClientRect();
-  const target = btn.getBoundingClientRect();
-  const clone = el.cloneNode(true);
+  const isModern = document.body.classList.contains('theme-modern');
+  const dur      = isModern ? 540 : 320;
+  const ease     = isModern ? 'cubic-bezier(.4,0,.2,1)' : 'ease';
+  const rect     = el.getBoundingClientRect();
+  const target   = btn.getBoundingClientRect();
+  const clone    = el.cloneNode(true);
   clone.style.position = 'fixed';
   clone.style.left = `${rect.left}px`;
   clone.style.top = `${rect.top}px`;
@@ -671,16 +674,17 @@ function animateWindowToTaskbar(el, btn) {
   clone.style.height = `${rect.height}px`;
   clone.style.margin = '0';
   clone.style.transformOrigin = 'top left';
-  clone.style.transition = 'transform .32s ease, opacity .22s ease';
+  clone.style.transition = `transform ${dur}ms ${ease}, opacity ${Math.round(dur * 0.65)}ms ${ease}`;
   clone.style.zIndex = '99999';
   clone.style.pointerEvents = 'none';
   clone.style.opacity = '1';
+  if (isModern) clone.style.borderRadius = '18px';
   document.body.appendChild(clone);
   requestAnimationFrame(() => {
-    clone.style.transform = `translate(${target.left - rect.left}px, ${target.top - rect.top}px) scale(0.12)`;
+    clone.style.transform = `translate(${target.left - rect.left}px, ${target.top - rect.top}px) scale(0.08)`;
     clone.style.opacity = '0';
   });
-  setTimeout(() => clone.remove(), 340);
+  setTimeout(() => clone.remove(), dur + 20);
 }
 
 /* ── WINDOW FACTORY ──────────────────────────────────────── */
@@ -713,11 +717,25 @@ function createWindow98(meta) {
 
   minBtn.addEventListener('click', () => {
     const btn = document.querySelector(`#taskbar-apps button[data-win-id="${id}"]`);
-    animateWindowToTaskbar(el, btn);
-    setTimeout(() => {
-      el.style.display = 'none';
-      updateTaskbar();
-    }, 80);
+    if (document.body.classList.contains('theme-modern')) {
+      el.style.transition = 'transform .38s cubic-bezier(.4,0,.2,1), opacity .3s ease';
+      el.style.transform = 'scale(0.88)';
+      el.style.opacity = '0';
+      animateWindowToTaskbar(el, btn);
+      setTimeout(() => {
+        el.style.display = 'none';
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.opacity = '';
+        updateTaskbar();
+      }, 400);
+    } else {
+      animateWindowToTaskbar(el, btn);
+      setTimeout(() => {
+        el.style.display = 'none';
+        updateTaskbar();
+      }, 80);
+    }
   });
   maxBtn.addEventListener('click', () => {
     el.style.display = 'flex';

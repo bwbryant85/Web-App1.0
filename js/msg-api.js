@@ -44,7 +44,22 @@ window.MSG = (function () {
     };
   }
 
+  let _serverAvailable = null; // null=unchecked, true/false
+  async function checkServer() {
+    if (_serverAvailable !== null) return _serverAvailable;
+    try {
+      const r = await fetch('/api/ping', { method: 'GET', cache: 'no-store' });
+      _serverAvailable = r.ok;
+    } catch(e) {
+      _serverAvailable = false;
+    }
+    return _serverAvailable;
+  }
+  function isServerAvailable() { return _serverAvailable; }
+
   async function register(username) {
+    const ok = await checkServer();
+    if (!ok) return { ok: false, error: 'server_unavailable' };
     const r = await fetch('/api/username/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -108,7 +123,7 @@ window.MSG = (function () {
 
   return {
     getUsername, setUsername, isReceiving, connect, disconnect,
-    onNewMessage, register, checkUser,
+    onNewMessage, register, checkUser, checkServer, isServerAvailable,
     getConversation, sendMessage, getConversations,
     getContacts, saveContact, deleteContact, formatTime
   };

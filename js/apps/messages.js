@@ -31,6 +31,10 @@ function initMessages98() {
       btn.disabled = true; btn.textContent = 'Registering…';
       try {
         const res = await MSG.register(val);
+        if (res.error === 'server_unavailable') {
+          err.textContent = 'Server unavailable — messaging only works on the live Replit app.';
+          btn.disabled = false; btn.textContent = 'Set Username'; return;
+        }
         if (res.ok) {
           MSG.setUsername(val); MSG.connect();
           c.innerHTML = '';
@@ -41,7 +45,7 @@ function initMessages98() {
           btn.disabled = false; btn.textContent = 'Set Username';
         }
       } catch(e) {
-        err.textContent = 'Network error. Is the server running?';
+        err.textContent = 'Server unavailable. Use the Replit-hosted version.';
         btn.disabled = false; btn.textContent = 'Set Username';
       }
     }

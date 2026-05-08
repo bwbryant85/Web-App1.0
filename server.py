@@ -64,6 +64,12 @@ def index():
 def static_files(path):
     return send_from_directory(BASE_DIR, path)
 
+# ── Health check ──────────────────────────────────────────────────────────────
+
+@app.route('/api/ping')
+def ping():
+    return jsonify({'ok': True})
+
 # ── Username API ──────────────────────────────────────────────────────────────
 
 @app.route('/api/username/register', methods=['POST'])
