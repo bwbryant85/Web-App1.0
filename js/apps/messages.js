@@ -68,11 +68,6 @@ function initMessages98() {
     listPanel.style.cssText = 'position:absolute;inset:0;display:flex;flex-direction:column;background:var(--win-chrome);transition:transform .28s ease;';
     body.appendChild(listPanel);
 
-    const listTop = document.createElement('div');
-    listTop.style.cssText = 'flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:5px 10px;background:var(--win-title-active);';
-    listTop.innerHTML = `<span style="font-family:var(--pixel-font);font-size:1rem;color:#fff;">💬 Messages</span><span style="font-family:var(--pixel-font);font-size:.78rem;color:rgba(255,255,255,.75);">@${me}</span>`;
-    listPanel.appendChild(listTop);
-
     const newRow = document.createElement('div');
     newRow.style.cssText = 'flex-shrink:0;display:flex;gap:6px;padding:6px 8px;border-bottom:2px solid var(--win-chrome-dark);';
     newRow.innerHTML = `

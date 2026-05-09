@@ -28,6 +28,26 @@ window.haptic = function(type) {
 
 /* ── COMPAT GLOBALS ──────────────────────────────────────── */
 // content = the body of the currently open win98 window
+
+/* ── Theme override tracking ─────────────────────────────── */
+// Maps appId → base retro script path (used to restore init functions on theme switch)
+const APP_BASE_SCRIPT = {
+  appstore:   'js/apps/appstore.js',
+  assistant:  'js/apps/assistant.js',
+  browser:    'js/apps/browser.js',
+  clock:      'js/apps/clock.js',
+  contacts:   'js/apps/contacts.js',
+  filesystem: 'js/apps/filesystem.js',
+  library:    'js/apps/library.js',
+  messages:   'js/apps/messages.js',
+  notes:      'js/apps/notes.js',
+  paint:      'js/apps/paint.js',
+  settings:   'js/apps/settings98.js',
+  terminal:   'js/apps/terminal.js',
+  weather:    'js/apps/weather.js',
+};
+// Tracks which apps have had their init functions overridden by a non-retro theme script
+const themedApps = new Set();
 // This is set by OS.openApp so old app code still works
 window.content = null;
 
@@ -346,10 +366,30 @@ function applyTheme(theme) {
     updateSwitcher();
     if (typeof updateXPStrip === 'function') updateXPStrip();
 
-    // Fade out overlay
-    ov.style.transition = 'opacity 1s ease';
-    ov.style.opacity = '0';
-    setTimeout(() => ov.remove(), 1000);
+    function fadeOutOverlay() {
+      ov.style.transition = 'opacity 1s ease';
+      ov.style.opacity = '0';
+      setTimeout(() => { ov.remove(); kf.remove(); }, 1000);
+    }
+
+    // When switching TO retro: reload all base scripts that were overridden by theme scripts.
+    // This restores the original retro init functions (e.g. initSettings98) so reopening
+    // apps shows the correct retro UI instead of the stale modern version.
+    if (theme === 'retro' && themedApps.size > 0) {
+      const appsToReload = [...themedApps];
+      themedApps.clear();
+      let pending = appsToReload.length;
+      appsToReload.forEach(appId => {
+        const basePath = APP_BASE_SCRIPT[appId];
+        if (!basePath) { pending--; if (pending === 0) fadeOutOverlay(); return; }
+        loadAppScript(basePath + '?t=' + Date.now(), appId, 'retro', () => {
+          pending--;
+          if (pending === 0) fadeOutOverlay();
+        });
+      });
+    } else {
+      fadeOutOverlay();
+    }
   }, 1500);
 }
 
@@ -604,13 +644,22 @@ function loadAppScript(src, appId, theme, callback) {
   s.dataset.themeScript = 'true';
   s.dataset.appId = appId;
   s.dataset.theme = theme;
-  s.onload = callback;
-  s.onerror = () => {
-    // If theme script fails, try base script if not already retro
+  s.onload = () => {
+    // Track which apps have non-retro overrides active
     if (theme !== 'retro') {
-      loadAppScript(`js/apps/${appId}.js?t=${Date.now()}`, appId, 'retro', callback);
+      themedApps.add(appId);
     } else {
-      callback(); // Fallback to whatever is defined
+      themedApps.delete(appId);
+    }
+    if (callback) callback();
+  };
+  s.onerror = () => {
+    // If theme script fails, reload the correct base retro script
+    if (theme !== 'retro') {
+      const basePath = APP_BASE_SCRIPT[appId] || `js/apps/${appId}.js`;
+      loadAppScript(basePath + '?t=' + Date.now(), appId, 'retro', callback);
+    } else {
+      if (callback) callback();
     }
   };
   document.head.appendChild(s);

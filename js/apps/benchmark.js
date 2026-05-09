@@ -136,24 +136,24 @@ function initBenchmark() {
   var RENDERS=[drawMat,drawWave,drawGPU,drawMem,drawJulia,drawStor];
 
   var TESTS=[
-    {name:'CPU Single-Core',dur:10,run:function(cb){var ops=0,fr=0,iv=setInterval(function(){var o=cpuWork();ops+=o;fr++;var m=+(o/1e6).toFixed(2);card('bm-c1','bm-c1b','bm-c1s',m,' M/s',20,'#00ffcc',sparks.c1);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.cpu1=+(ops/Math.max(fr,1)/1e6).toFixed(2);cb();},10000);return function(){clearInterval(iv);};}},
-    {name:'CPU Multi-Core', dur:10,run:function(cb){var fr=0,tot=0,iv=setInterval(function(){var o=cpuWork()*4;tot+=o;fr++;card('bm-cm','bm-cmb','bm-cms',+(o/1e6).toFixed(2),' M/s',80,'#69ff47',sparks.cm);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.cpuM=+(tot/Math.max(fr,1)/1e6).toFixed(2);cb();},10000);return function(){clearInterval(iv);};}},
+    {name:'CPU Single-Core',dur:10,run:function(cb){var ops=0,fr=0,iv=setInterval(function(){var o=cpuWork();ops+=o;fr++;var m=+(o/1e6).toFixed(2);card('bm-c1','bm-c1b','bm-c1s',m,' M/s',2,'#00ffcc',sparks.c1);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.cpu1=+(ops/Math.max(fr,1)/1e6).toFixed(2);cb();},10000);return function(){clearInterval(iv);};}},
+    {name:'CPU Multi-Core', dur:10,run:function(cb){var fr=0,tot=0,iv=setInterval(function(){var o=cpuWork()*4;tot+=o;fr++;card('bm-cm','bm-cmb','bm-cms',+(o/1e6).toFixed(2),' M/s',8,'#69ff47',sparks.cm);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.cpuM=+(tot/Math.max(fr,1)/1e6).toFixed(2);cb();},10000);return function(){clearInterval(iv);};}},
     {name:'GPU Rendering',   dur:10,run:function(cb){
       var active=true,fpsVal=0,framesSinceReport=0,lastReport=performance.now();
       var iv=setInterval(function(){
         var now=performance.now(),dt=now-lastReport;
         fpsVal=dt>0?Math.round(framesSinceReport/(dt/1000)):fpsVal;
         framesSinceReport=0;lastReport=now;
-        card('bm-gp','bm-gpb','bm-gps',fpsVal,' FPS',120,'#ff4af8',sparks.gp);
+        card('bm-gp','bm-gpb','bm-gps',fpsVal,' FPS',90,'#ff4af8',sparks.gp);
       },500);
       function rafLoop(){if(!active)return;framesSinceReport++;requestAnimationFrame(rafLoop);}
       requestAnimationFrame(rafLoop);
       setTimeout(function(){active=false;clearInterval(iv);res.gpu=fpsVal;cb();},10000);
       return function(){active=false;clearInterval(iv);};
     }},
-    {name:'Memory Bandwidth',dur:10,run:function(cb){var fr=0,iv=setInterval(function(){var sz=1024*256,buf=new Float32Array(sz),s=performance.now();for(var i=0;i<sz;i++)buf[i]=Math.sin(i*.001);var mbps=Math.round(sz*4/Math.max(performance.now()-s,0.05)*1000/1e6);fr++;card('bm-mm','bm-mmb','bm-mms',mbps,' MB/s',3000,'#4dd0e1',sparks.mm);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.mem=sparks.mm.length?Math.round(sparks.mm.reduce(function(a,b){return a+b;},0)/sparks.mm.length):0;cb();},10000);return function(){clearInterval(iv);};}},
-    {name:'Math / FPU',      dur:10,run:function(cb){var fr=0,iv=setInterval(function(){var ops=0,s=performance.now();while(performance.now()-s<14)for(var i=0;i<500;i++)ops+=Math.sqrt(Math.abs(Math.sin(i*1.234)*Math.cos(i*.567)));var m=+(ops/1e6).toFixed(1);fr++;card('bm-fp','bm-fpb','bm-fps',m,' Gop',50,'#ffd740',sparks.fp);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.fp=sparks.fp.length?+(sparks.fp.reduce(function(a,b){return a+b;},0)/sparks.fp.length).toFixed(1):0;cb();},10000);return function(){clearInterval(iv);};}},
-    {name:'Storage I/O',     dur:10,run:function(cb){var fr=0,iv=setInterval(function(){var s=performance.now();try{var k='__bm__',dt='x'.repeat(50000);sessionStorage.setItem(k,dt);sessionStorage.getItem(k);sessionStorage.removeItem(k);}catch(e){}var iops=Math.round(1000/Math.max(performance.now()-s,.1));fr++;card('bm-st2','bm-stb','bm-sts',iops,' ops/s',5000,'#ce93d8',sparks.st);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.stor=sparks.st.length?Math.round(sparks.st.reduce(function(a,b){return a+b;},0)/sparks.st.length):0;cb();},10000);return function(){clearInterval(iv);};}},
+    {name:'Memory Bandwidth',dur:10,run:function(cb){var fr=0,iv=setInterval(function(){var sz=1024*256,buf=new Float32Array(sz),s=performance.now();for(var i=0;i<sz;i++)buf[i]=Math.sin(i*.001);var mbps=Math.round(sz*4/Math.max(performance.now()-s,0.05)*1000/1e6);fr++;card('bm-mm','bm-mmb','bm-mms',mbps,' MB/s',800,'#4dd0e1',sparks.mm);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.mem=sparks.mm.length?Math.round(sparks.mm.reduce(function(a,b){return a+b;},0)/sparks.mm.length):0;cb();},10000);return function(){clearInterval(iv);};}},
+    {name:'Math / FPU',      dur:10,run:function(cb){var fr=0,iv=setInterval(function(){var ops=0,s=performance.now();while(performance.now()-s<14)for(var i=0;i<500;i++)ops+=Math.sqrt(Math.abs(Math.sin(i*1.234)*Math.cos(i*.567)));var m=+(ops/1e6).toFixed(1);fr++;card('bm-fp','bm-fpb','bm-fps',m,' Gop',20,'#ffd740',sparks.fp);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.fp=sparks.fp.length?+(sparks.fp.reduce(function(a,b){return a+b;},0)/sparks.fp.length).toFixed(1):0;cb();},10000);return function(){clearInterval(iv);};}},
+    {name:'Storage I/O',     dur:10,run:function(cb){var fr=0,iv=setInterval(function(){var s=performance.now();try{var k='__bm__',dt='x'.repeat(50000);sessionStorage.setItem(k,dt);sessionStorage.getItem(k);sessionStorage.removeItem(k);}catch(e){}var iops=Math.round(1000/Math.max(performance.now()-s,.1));fr++;card('bm-st2','bm-stb','bm-sts',iops,' ops/s',2000,'#ce93d8',sparks.st);prog(fr/50);},200);setTimeout(function(){clearInterval(iv);res.stor=sparks.st.length?Math.round(sparks.st.reduce(function(a,b){return a+b;},0)/sparks.st.length):0;cb();},10000);return function(){clearInterval(iv);};}},
   ];
 
   var stopCur=null;

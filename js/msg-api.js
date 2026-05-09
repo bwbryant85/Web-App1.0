@@ -9,8 +9,8 @@ window.MSG = (function () {
   /* Public Gun.js relay peers — fall back to localStorage if all fail */
   const PEERS = [
     'https://relay.gun.eco/gun',
-    'https://gun-manhattan.herokuapp.com/gun',
-    'https://peer.wallie.io/gun'
+    'https://gun-us.era.eco/gun',
+    'https://gun-eu.era.eco/gun'
   ];
 
   let _gun       = null;

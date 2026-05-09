@@ -1,5 +1,5 @@
 /* ════════════ APP STORE v8 MODERN ════════════
-   Modern app store with glass effects
+   Modern app store with glass effects — install & remove support
    ════════════════════════════════════ */
 
 function initAppStore98() {
@@ -59,76 +59,111 @@ function initAppStore98() {
   body.style.cssText = 'flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;';
   c.appendChild(body);
 
-  // Status
+  // Status bar
   const status = document.createElement('div');
+  status.id = 'store-status-bar';
   status.style.cssText = 'flex-shrink:0;padding:12px 16px;text-align:center;font-family:\'Inter\',sans-serif;font-size:.9rem;color:#666;background:rgba(255,255,255,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(15,23,42,.08);border-radius:0 0 28px 28px;';
   c.appendChild(status);
 
   const searchInput = header.querySelector('#store-search');
   const categoriesDiv = header.querySelector('#store-categories');
 
+  // Installed state — use POS for persistence
+  const installed = new Set(POS.getInstalledApps() || ALL_STORE_APPS.map(a => a.id));
+  let installing = null;
   let currentCat = 'All';
   let searchTerm = '';
 
-  function updateInstalledCount() {
-    const installed = ALL_STORE_APPS.filter(app => APP_LOOKUP[app.id] && !APP_LOOKUP[app.id].stub).length;
-    status.textContent = `${installed} of ${ALL_STORE_APPS.length} apps installed`;
+  function updateStatus() {
+    status.textContent = `${installed.size} of ${ALL_STORE_APPS.length} apps installed`;
   }
 
   function renderCategories() {
     categoriesDiv.innerHTML = '';
     CATS.forEach(cat => {
       const btn = document.createElement('button');
-      btn.style.cssText = `font-family:'Inter',sans-serif;font-size:.9rem;color:${currentCat === cat ? '#fff' : '#111'};background:${currentCat === cat ? '#4a90d9' : '#f8f9fa'};border:1px solid rgba(15,23,42,.12);border-radius:20px;padding:6px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap;`;
+      btn.style.cssText = `font-family:'Inter',sans-serif;font-size:.9rem;color:${currentCat === cat ? '#fff' : '#111'};background:${currentCat === cat ? '#4a90d9' : '#f8f9fa'};border:1px solid rgba(15,23,42,.12);border-radius:20px;padding:6px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap;flex-shrink:0;`;
       btn.textContent = cat;
-      btn.onclick = () => {
-        currentCat = cat;
-        renderCategories();
-        renderApps();
-      };
+      btn.onclick = () => { currentCat = cat; renderCategories(); renderApps(); };
       categoriesDiv.appendChild(btn);
     });
   }
 
+  function toggleInstall(app, actionBtn) {
+    if (installing) return;
+    haptic('medium');
+    const willInstall = !installed.has(app.id);
+
+    if (willInstall) {
+      // Install with progress animation
+      installing = app.id;
+      actionBtn.textContent = '0%';
+      actionBtn.style.background = '#4a90d9';
+      actionBtn.style.color = '#fff';
+      let pct = 0;
+      const iv = setInterval(() => {
+        pct += Math.floor(Math.random() * 18) + 8;
+        if (pct >= 100) {
+          clearInterval(iv);
+          installed.add(app.id);
+          POS.setInstalledApps([...installed]);
+          POS.markFlag('installedFromStore');
+          POS.addXP(10, 'install');
+          actionBtn.textContent = 'Installed ✓';
+          actionBtn.style.background = '#34c759';
+          actionBtn.dataset.installed = '1';
+          updateStatus();
+          showToast(`📦 ${app.name} installed!`, 'cyan', 2000);
+          installing = null;
+          window._rebuildGrid && window._rebuildGrid();
+        } else {
+          actionBtn.textContent = pct + '%';
+        }
+      }, 80);
+    } else {
+      // Remove
+      installed.delete(app.id);
+      POS.setInstalledApps([...installed]);
+      actionBtn.textContent = 'Get';
+      actionBtn.style.background = '#4a90d9';
+      actionBtn.dataset.installed = '0';
+      updateStatus();
+      showToast(`🗑️ ${app.name} removed`, 'red', 1500);
+      window._rebuildGrid && window._rebuildGrid();
+    }
+  }
+
   function renderApps() {
     body.innerHTML = '';
+    const q = searchTerm.trim().toLowerCase();
     const filtered = ALL_STORE_APPS.filter(app => {
       const matchesCat = currentCat === 'All' || app.cat === currentCat;
-      const matchesSearch = !searchTerm || app.name.toLowerCase().includes(searchTerm.toLowerCase()) || app.desc.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = !q || app.name.toLowerCase().includes(q) || app.desc.toLowerCase().includes(q);
       return matchesCat && matchesSearch;
     });
 
     filtered.forEach(app => {
+      const isInstalled = installed.has(app.id);
       const card = document.createElement('div');
-      card.style.cssText = 'background:rgba(255,255,255,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;gap:12px;';
+      card.style.cssText = 'background:rgba(255,255,255,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:16px;margin-bottom:12px;display:flex;gap:12px;align-items:center;';
 
       const iconDiv = document.createElement('div');
-      iconDiv.style.cssText = `width:48px;height:48px;border-radius:12px;background:${app.col};display:flex;align-items:center;justify-content:center;font-size:1.5rem;`;
+      iconDiv.style.cssText = `width:52px;height:52px;border-radius:14px;background:${app.col};display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;`;
       iconDiv.textContent = app.ico;
 
       const infoDiv = document.createElement('div');
-      infoDiv.style.cssText = 'flex:1;';
+      infoDiv.style.cssText = 'flex:1;min-width:0;';
       infoDiv.innerHTML = `
-        <div style="font-family:'Inter',sans-serif;font-size:1rem;color:#111;font-weight:600;margin-bottom:2px;">${app.name}</div>
-        <div style="font-family:'Inter',sans-serif;font-size:.8rem;color:#666;margin-bottom:4px;">${app.cat} • ${app.size}</div>
-        <div style="font-family:'Inter',sans-serif;font-size:.9rem;color:#666;line-height:1.4;">${app.desc}</div>
-        <div style="display:flex;gap:4px;margin-top:8px;">
-          <span style="font-family:'Inter',sans-serif;font-size:.8rem;color:#666;">⭐ ${app.rating}</span>
-        </div>
+        <div style="font-family:'Inter',sans-serif;font-size:1rem;color:#111;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${app.name}</div>
+        <div style="font-family:'Inter',sans-serif;font-size:.8rem;color:#888;margin-bottom:4px;">${app.cat} · ${app.size} · ⭐ ${app.rating}</div>
+        <div style="font-family:'Inter',sans-serif;font-size:.85rem;color:#555;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${app.desc}</div>
       `;
 
       const actionBtn = document.createElement('button');
-      const isInstalled = APP_LOOKUP[app.id] && !APP_LOOKUP[app.id].stub;
-      actionBtn.style.cssText = `font-family:'Inter',sans-serif;font-size:.9rem;color:#fff;background:${isInstalled ? '#34c759' : '#4a90d9'};border:none;border-radius:12px;padding:8px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;`;
-      actionBtn.textContent = isInstalled ? 'Installed' : 'Get';
-      actionBtn.onclick = () => {
-        if (!isInstalled) {
-          // Simulate install
-          showToast(`📦 ${app.name} installed!`, 'cyan', 2000);
-          updateInstalledCount();
-          renderApps();
-        }
-      };
+      actionBtn.dataset.installed = isInstalled ? '1' : '0';
+      actionBtn.style.cssText = `font-family:'Inter',sans-serif;font-size:.9rem;color:#fff;background:${isInstalled ? '#34c759' : '#4a90d9'};border:none;border-radius:12px;padding:8px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent;flex-shrink:0;min-width:68px;transition:background .15s;`;
+      actionBtn.textContent = isInstalled ? 'Installed ✓' : 'Get';
+      actionBtn.onclick = () => toggleInstall(app, actionBtn);
 
       card.appendChild(iconDiv);
       card.appendChild(infoDiv);
@@ -136,20 +171,17 @@ function initAppStore98() {
       body.appendChild(card);
     });
 
-    if (filtered.length === 0) {
+    if (!filtered.length) {
       const empty = document.createElement('div');
-      empty.style.cssText = 'text-align:center;padding:40px;font-family:\'Inter\',sans-serif;color:#666;';
-      empty.innerHTML = '<div style="font-size:3rem;margin-bottom:16px;">🔍</div><div>No apps found matching your search.</div>';
+      empty.style.cssText = 'text-align:center;padding:60px 30px;font-family:\'Inter\',sans-serif;color:#888;';
+      empty.innerHTML = '<div style="font-size:3rem;margin-bottom:16px;">🔍</div><div style="font-size:1rem;">No apps match your search.</div>';
       body.appendChild(empty);
     }
   }
 
-  searchInput.oninput = () => {
-    searchTerm = searchInput.value;
-    renderApps();
-  };
+  searchInput.oninput = () => { searchTerm = searchInput.value; renderApps(); };
 
   renderCategories();
   renderApps();
-  updateInstalledCount();
+  updateStatus();
 }
