@@ -1,65 +1,20 @@
 /* ════════════════════════════════════════════════════════════
-   MAPS v3.1 — Modern (Windows 11 / Apple Maps style)
-   MapLibre GL JS + OpenFreeMap | Nominatim geocoding
-   Real WebGL 3D buildings on BOTH map + satellite views
+   MAPS v3.2 — Modern (Windows 11 / Apple Maps style)
+   MapLibre GL JS + OpenFreeMap liberty style
+   Satellite = Esri raster injected behind vector layers
+   Real WebGL 3D buildings work on BOTH Map + Satellite
    ════════════════════════════════════════════════════════════ */
 
 function initMaps98() {
-  let mapInstance  = null;
+  let mapInstance   = null;
   let currentMarker = null;
   let userMarker    = null;
   let libLoaded     = false;
   let currentMode   = 'map';
   let is3D          = false;
+  let satReady      = false; // true once esri source+layer has been injected
 
   const STYLE_ROAD = 'https://tiles.openfreemap.org/styles/liberty';
-
-  /* Satellite hybrid style: Esri imagery base + OpenFreeMap vector overlay for buildings */
-  function buildSatHybridStyle() {
-    return {
-      version: 8,
-      glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-      sources: {
-        'esri-sat': {
-          type: 'raster',
-          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-          tileSize: 256,
-          attribution: '© Esri, Maxar, Earthstar Geographics',
-          maxzoom: 19,
-        },
-        'openmaptiles': {
-          type: 'vector',
-          url: 'https://tiles.openfreemap.org/planet',
-        },
-      },
-      layers: [
-        /* Satellite base */
-        { id:'sat-base', type:'raster', source:'esri-sat', minzoom:0, maxzoom:20 },
-        /* Building extrusions on top of satellite */
-        {
-          id: 'sat-buildings-3d',
-          source: 'openmaptiles',
-          'source-layer': 'building',
-          type: 'fill-extrusion',
-          minzoom: 14,
-          filter: ['!=', ['get', 'hide_3d'], true],
-          paint: {
-            'fill-extrusion-color': [
-              'interpolate', ['linear'], ['get', 'render_height'],
-              0,   'rgba(220,210,195,0.82)',
-              30,  'rgba(195,185,170,0.85)',
-              80,  'rgba(170,160,145,0.88)',
-              200, 'rgba(140,130,115,0.90)',
-            ],
-            'fill-extrusion-height':       ['coalesce', ['get','render_height'], ['get','height'], 8],
-            'fill-extrusion-base':         ['coalesce', ['get','render_min_height'], 0],
-            'fill-extrusion-opacity':      0.0, /* starts hidden; shown only in 3D mode */
-            'fill-extrusion-ambient-occlusion-intensity': 0.5,
-          },
-        },
-      ],
-    };
-  }
 
   /* ── Root ── */
   const root = document.createElement('div');
@@ -88,7 +43,7 @@ function initMaps98() {
   searchInput.style.cssText = 'flex:1;border:none;outline:none;background:transparent;font-size:16px;font-family:inherit;color:#1c1c1e;';
 
   const clearBtn = document.createElement('button');
-  clearBtn.textContent = '✕';
+  clearBtn.textContent = '\u2715';
   clearBtn.style.cssText = 'border:none;background:rgba(0,0,0,0.09);color:#48484a;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:11px;display:none;align-items:center;justify-content:center;flex-shrink:0;padding:0;';
 
   searchRow.appendChild(searchIcon);
@@ -105,7 +60,7 @@ function initMaps98() {
   searchCard.appendChild(suggestList);
   root.appendChild(searchCard);
 
-  /* ── Segmented control ── */
+  /* ── Segmented Map / Satellite / 3D ── */
   const viewControl = document.createElement('div');
   viewControl.style.cssText = 'position:absolute;top:84px;left:50%;transform:translateX(-50%);z-index:1000;display:flex;background:rgba(255,255,255,0.88);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.14);overflow:hidden;';
 
@@ -121,7 +76,6 @@ function initMaps98() {
     s.style.cssText = 'width:1px;background:rgba(0,0,0,0.12);margin:6px 0;flex-shrink:0;';
     return s;
   }
-
   const mapBtn = makeSegBtn('Map', true);
   const satBtn = makeSegBtn('Satellite', false);
   const btn3D  = makeSegBtn('3D', false);
@@ -145,9 +99,9 @@ function initMaps98() {
     btn.addEventListener('pointerleave',()=>btn.style.background='transparent');
     return btn;
   }
-  const locBtn     = makePillBtn('📍', 'Location');
-  const zoomInBtn  = makePillBtn('＋', 'Zoom In');
-  const zoomOutBtn = makePillBtn('－', 'Zoom Out');
+  const locBtn     = makePillBtn('📍','Location');
+  const zoomInBtn  = makePillBtn('＋','Zoom In');
+  const zoomOutBtn = makePillBtn('－','Zoom Out');
   zoomOutBtn.style.borderRight = 'none';
   [locBtn,zoomInBtn,zoomOutBtn].forEach(b=>bottomPill.appendChild(b));
   root.appendChild(bottomPill);
@@ -164,8 +118,8 @@ function initMaps98() {
     statusChip.style.transform = 'translateX(-50%) translateY(0)';
     clearTimeout(statusTimer);
     if ((dur ?? 3000) > 0) statusTimer = setTimeout(()=>{
-      statusChip.style.opacity='0';
-      statusChip.style.transform='translateX(-50%) translateY(8px)';
+      statusChip.style.opacity = '0';
+      statusChip.style.transform = 'translateX(-50%) translateY(8px)';
     }, dur ?? 3000);
   }
 
@@ -175,7 +129,7 @@ function initMaps98() {
   loadScreen.innerHTML = `
     <div style="font-size:52px;animation:maps-float 1.6s ease-in-out infinite alternate;">🗺️</div>
     <div style="font-size:17px;font-weight:600;color:#1c1c1e;letter-spacing:-0.02em;">Maps</div>
-    <div style="font-size:13px;color:#8e8e93;">Loading…</div>
+    <div style="font-size:13px;color:#8e8e93;">Loading\u2026</div>
     <div style="width:200px;height:4px;background:#e5e5ea;border-radius:2px;overflow:hidden;margin-top:4px;">
       <div id="maps-mod-prog" style="height:100%;width:0%;background:linear-gradient(90deg,#007aff,#5ac8fa);border-radius:2px;transition:width 0.3s ease;"></div>
     </div>
@@ -198,11 +152,11 @@ function initMaps98() {
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';
     script.onload = ()=>{ libLoaded=true; if(prog) prog.style.width='100%'; setTimeout(cb,300); };
-    script.onerror = ()=>{ loadScreen.innerHTML='<div style="font-size:40px;">⚠️</div><div style="font-size:16px;font-weight:600;color:#1c1c1e;">Connection Error</div>'; };
+    script.onerror = ()=>{ loadScreen.innerHTML='<div style="font-size:40px;">\u26a0\ufe0f</div><div style="font-size:16px;font-weight:600;color:#1c1c1e;">Connection Error</div><div style="font-size:13px;color:#8e8e93;text-align:center;max-width:220px;">Unable to load Maps.</div>'; };
     document.head.appendChild(script);
   }
 
-  /* ── Init MapLibre ── */
+  /* ── Init MapLibre — load road style only, inject satellite later ── */
   function initMapLibre() {
     loadScreen.style.opacity = '0';
     loadScreen.style.transition = 'opacity 0.4s ease';
@@ -234,70 +188,103 @@ function initMaps98() {
       antialias: true,
     });
 
-    mapInstance.on('load', ()=>{ showStatus('Maps loaded', 2000); });
+    mapInstance.on('load', ()=>{
+      showStatus('Maps loaded', 2000);
+      /* Pre-inject the Esri satellite source now so it's ready when user hits Satellite */
+      injectSatelliteSource();
+    });
+
     mapInstance.on('click', (e)=>{
       const{lng,lat}=e.lngLat;
       placeMarker(lat,lng,`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
     });
   }
 
-  /* ── Set buildings opacity based on 3D state ── */
-  function setBuildingOpacity(opacity) {
-    if (!mapInstance) return;
-    /* Road mode — liberty style has its own building layer */
-    if (currentMode === 'map') {
-      try {
-        if (mapInstance.getLayer('building')) {
-          mapInstance.setPaintProperty('building','fill-extrusion-opacity', opacity > 0 ? 0.88 : 0);
-        }
-        /* Also handle 3d-buildings layer we add manually */
-        if (mapInstance.getLayer('3d-buildings')) {
-          mapInstance.setPaintProperty('3d-buildings','fill-extrusion-opacity', opacity > 0 ? 0.88 : 0);
-        }
-      } catch(e){}
-    }
-    /* Satellite hybrid mode — use sat-buildings-3d layer */
-    if (currentMode === 'satellite') {
-      try {
-        if (mapInstance.getLayer('sat-buildings-3d')) {
-          mapInstance.setPaintProperty('sat-buildings-3d','fill-extrusion-opacity', opacity);
-        }
-      } catch(e){}
+  /* ── Inject Esri raster source + layer ONCE, behind all vector layers ── */
+  function injectSatelliteSource() {
+    if (satReady || !mapInstance) return;
+    try {
+      /* Add Esri imagery as a raster source */
+      mapInstance.addSource('esri-sat', {
+        type: 'raster',
+        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+        tileSize: 256,
+        attribution: '\u00a9 Esri, Maxar, Earthstar Geographics',
+        maxzoom: 19,
+      });
+
+      /* Insert as the very first layer (bottom of the stack) — road vector layers render on top */
+      const firstLayerId = mapInstance.getStyle().layers[0]?.id;
+      mapInstance.addLayer(
+        { id:'sat-imagery', type:'raster', source:'esri-sat', minzoom:0, maxzoom:20,
+          layout:{ visibility:'none' } }, /* hidden by default */
+        firstLayerId /* insert before first road layer */
+      );
+
+      satReady = true;
+    } catch(e) {
+      console.warn('Satellite inject failed:', e);
     }
   }
 
-  /* Add 3D building layer to road style if not already present */
-  function ensureRoad3DLayer() {
+  /* ── Show/hide satellite imagery layer ── */
+  function setSatVisibility(visible) {
+    if (!mapInstance || !satReady) return;
+    try {
+      mapInstance.setLayoutProperty('sat-imagery', 'visibility', visible ? 'visible' : 'none');
+    } catch(e){}
+  }
+
+  /* ── Hide/show all road vector layers so sat imagery shows clearly ── */
+  function setRoadLayersVisibility(visible) {
+    if (!mapInstance) return;
+    const vis = visible ? 'visible' : 'none';
+    try {
+      mapInstance.getStyle().layers.forEach(layer=>{
+        /* Keep building extrusion layers — they show on satellite too */
+        if (layer.id === 'sat-imagery' || layer.id === '3d-buildings' || layer.id === 'sat-buildings-3d') return;
+        /* Hide everything except background when satellite is on */
+        if (!visible && layer.type === 'background') return;
+        if (!visible) {
+          mapInstance.setLayoutProperty(layer.id, 'visibility', 'none');
+        } else {
+          /* Restore original visibility — most road layers are visible by default */
+          mapInstance.setLayoutProperty(layer.id, 'visibility', 'visible');
+        }
+      });
+    } catch(e){}
+  }
+
+  /* ── 3D building layer management ── */
+  function ensure3DLayer() {
     if (!mapInstance || mapInstance.getLayer('3d-buildings')) return;
     try {
-      /* Hide the flat building fill if present */
-      if (mapInstance.getLayer('building')) {
-        mapInstance.setLayoutProperty('building','visibility','none');
-      }
+      /* Hide flat building fill */
+      if (mapInstance.getLayer('building')) mapInstance.setLayoutProperty('building','visibility','none');
       mapInstance.addLayer({
-        id: '3d-buildings',
-        source: 'openmaptiles',
-        'source-layer': 'building',
-        type: 'fill-extrusion',
-        minzoom: 14,
-        filter: ['!=',['get','hide_3d'],true],
-        paint: {
-          'fill-extrusion-color': [
+        id:'3d-buildings',
+        source:'openmaptiles',
+        'source-layer':'building',
+        type:'fill-extrusion',
+        minzoom:14,
+        filter:['!=',['get','hide_3d'],true],
+        paint:{
+          'fill-extrusion-color':[
             'interpolate',['linear'],['get','render_height'],
-            0,  '#e8e4dc',
-            50, '#d4cfc5',
-            100,'#c5bfb3',
+            0,  currentMode==='satellite'?'rgba(220,210,195,0.85)':'#e8e4dc',
+            50, currentMode==='satellite'?'rgba(195,185,170,0.88)':'#d4cfc5',
+            100,currentMode==='satellite'?'rgba(170,160,145,0.90)':'#c5bfb3',
           ],
-          'fill-extrusion-height':  ['coalesce',['get','render_height'],['get','height'],8],
-          'fill-extrusion-base':    ['coalesce',['get','render_min_height'],0],
+          'fill-extrusion-height': ['coalesce',['get','render_height'],['get','height'],8],
+          'fill-extrusion-base':   ['coalesce',['get','render_min_height'],0],
           'fill-extrusion-opacity': 0.88,
-          'fill-extrusion-ambient-occlusion-intensity': 0.45,
+          'fill-extrusion-ambient-occlusion-intensity':0.45,
         },
       });
     } catch(e){}
   }
 
-  function removeRoad3DLayer() {
+  function remove3DLayer() {
     if (!mapInstance) return;
     try {
       if (mapInstance.getLayer('3d-buildings')) mapInstance.removeLayer('3d-buildings');
@@ -305,39 +292,42 @@ function initMaps98() {
     } catch(e){}
   }
 
-  /* ── Mode switching ── */
-  function setMode(mode) {
-    if (!mapInstance) return;
-    const prev = currentMode;
-    currentMode = mode;
-
+  /* ── Update seg button styles ── */
+  function updateSegButtons() {
     [mapBtn, satBtn].forEach(b=>{
-      const active = (mode==='map'&&b.dataset.label==='Map')||(mode==='satellite'&&b.dataset.label==='Satellite');
+      const active = (currentMode==='map'&&b.dataset.label==='Map')||(currentMode==='satellite'&&b.dataset.label==='Satellite');
       b.style.background = active ? '#007aff' : 'transparent';
       b.style.color      = active ? '#fff'    : '#1c1c1e';
       b.style.fontWeight = active ? '600'     : '400';
     });
+  }
 
-    if (mode === 'map') {
-      showStatus('Map view', 1500);
-      mapInstance.setStyle(STYLE_ROAD);
-      mapInstance.once('style.load', ()=>{
-        if (is3D) {
-          ensureRoad3DLayer();
-          mapInstance.easeTo({pitch:55, duration:400});
-        }
-      });
+  /* ── Mode switch — NO setStyle() call, just toggle layers ── */
+  function setMode(mode) {
+    if (!mapInstance || mode === currentMode) return;
+    currentMode = mode;
+    updateSegButtons();
+
+    if (mode === 'satellite') {
+      showStatus('Satellite', 1500);
+      /* Make sure source is injected (may have failed on first load) */
+      if (!satReady) injectSatelliteSource();
+      /* Hide road vector layers, show sat imagery */
+      setRoadLayersVisibility(false);
+      setSatVisibility(true);
+      /* If 3D is on, keep buildings visible */
+      if (is3D && mapInstance.getLayer('3d-buildings')) {
+        mapInstance.setLayoutProperty('3d-buildings','visibility','visible');
+      }
     } else {
-      /* Satellite hybrid — Esri imagery + vector buildings */
-      showStatus('Satellite view', 1500);
-      mapInstance.setStyle(buildSatHybridStyle());
-      mapInstance.once('style.load', ()=>{
-        if (is3D) {
-          /* Show building extrusions over satellite */
-          setBuildingOpacity(0.82);
-          mapInstance.easeTo({pitch:55, duration:400});
-        }
-      });
+      showStatus('Map', 1500);
+      /* Hide sat, restore road layers */
+      setSatVisibility(false);
+      setRoadLayersVisibility(true);
+      if (is3D) {
+        /* Re-hide flat buildings, keep 3D layer */
+        if (mapInstance.getLayer('building')) mapInstance.setLayoutProperty('building','visibility','none');
+      }
     }
   }
 
@@ -351,13 +341,11 @@ function initMaps98() {
 
     if (is3D) {
       mapInstance.easeTo({pitch:55, zoom:Math.max(mapInstance.getZoom(),15), duration:700});
-      if (currentMode === 'map') ensureRoad3DLayer();
-      else setBuildingOpacity(0.82);
+      ensure3DLayer();
       showStatus('3D', 1500);
     } else {
       mapInstance.easeTo({pitch:0, duration:600});
-      if (currentMode === 'map') removeRoad3DLayer();
-      else setBuildingOpacity(0.0);
+      remove3DLayer();
       showStatus('2D', 1500);
     }
   }
@@ -394,7 +382,7 @@ function initMaps98() {
   /* ── Search ── */
   function doSearch(query) {
     if (!query.trim()||!mapInstance) return;
-    showStatus('Searching…',0);
+    showStatus('Searching\u2026',0);
     hideSuggestions();
     fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&addressdetails=1`,{headers:{'Accept-Language':'en'}})
       .then(r=>r.json())
@@ -451,7 +439,7 @@ function initMaps98() {
   /* ── Geolocation ── */
   function goToMyLocation(){
     if(!navigator.geolocation){showStatus('Geolocation not supported',3000);return;}
-    showStatus('Finding your location…',0);
+    showStatus('Finding your location\u2026',0);
     locBtn.style.opacity='0.5';
     navigator.geolocation.getCurrentPosition(
       (pos)=>{
@@ -479,7 +467,6 @@ function initMaps98() {
   });
   clearBtn.addEventListener('click',()=>{searchInput.value='';clearBtn.style.display='none';hideSuggestions();searchInput.focus();});
   root.addEventListener('click',(e)=>{if(!searchCard.contains(e.target)) hideSuggestions();});
-
   mapBtn.addEventListener('click',()=>setMode('map'));
   satBtn.addEventListener('click',()=>setMode('satellite'));
   btn3D.addEventListener('click',toggle3D);
