@@ -10,7 +10,9 @@ window.MSG = (function () {
   const PEERS = [
     'https://relay.gun.eco/gun',
     'https://gun-us.era.eco/gun',
-    'https://gun-eu.era.eco/gun'
+    'https://gun-eu.era.eco/gun',
+    'https://gunjs.herokuapp.com/gun',
+    'https://gun-manhattan.herokuapp.com/gun'
   ];
 
   let _gun       = null;
@@ -47,7 +49,7 @@ window.MSG = (function () {
         _inboxSeen.add(msg.id);
         _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
       });
-    }, 800);
+    }, 300);
     
     /* Also try continuous listening */
     g.get('ipocket8-inbox-' + me).on(data => {
@@ -146,7 +148,7 @@ window.MSG = (function () {
           stableCount = 0;
         }
         lastCount = currentCount;
-      }, 200);
+      }, 100);
     });
   }
 
@@ -165,6 +167,14 @@ window.MSG = (function () {
     /* Conversation index for both users */
     g.get('ipocket8-convs-' + from_user).get(to_user).put({ partner: to_user,   text, ts });
     g.get('ipocket8-convs-' + to_user  ).get(from_user).put({ partner: from_user, text, ts });
+
+    /* Force sync by putting again after a short delay */
+    setTimeout(() => {
+      g.get(convKey(from_user, to_user)).get(id).put(msg);
+      g.get('ipocket8-inbox-' + to_user).get(id).put(msg);
+      g.get('ipocket8-convs-' + from_user).get(to_user).put({ partner: to_user,   text, ts });
+      g.get('ipocket8-convs-' + to_user  ).get(from_user).put({ partner: from_user, text, ts });
+    }, 100);
 
     /* Notify local listeners immediately (sender sees sent msg at once) */
     _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
@@ -237,7 +247,7 @@ window.MSG = (function () {
           stableCount = 0;
         }
         lastCount = currentCount;
-      }, 200);
+      }, 100);
     });
   }
 
@@ -260,7 +270,7 @@ window.MSG = (function () {
         onMsg(msg);
       });
       
-      /* Also poll every 500ms to catch messages that real-time missed */
+      /* Also poll every 200ms to catch messages that real-time missed */
       pollId = setInterval(() => {
         g.get(key).map().once(msg => {
           if (!msg || !msg.id || !msg.text) return;
@@ -268,7 +278,7 @@ window.MSG = (function () {
           seen.add(msg.id);
           onMsg(msg);
         });
-      }, 500);
+      }, 200);
     }, 50);
     
     return () => { 

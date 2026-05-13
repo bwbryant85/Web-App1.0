@@ -159,11 +159,13 @@ function initMessages98() {
 
       chatPanel.style.transform = 'translateX(0)';
 
+      let readStatusInterval = null;
+
       chatHead.querySelector('#chat-back').addEventListener('click', () => {
         chatPanel.style.transform = 'translateX(100%)';
         currentChat = null;
         if (unsubChat) { unsubChat(); unsubChat = null; }
-        clearInterval(readStatusInterval);
+        if (readStatusInterval) { clearInterval(readStatusInterval); readStatusInterval = null; }
         loadConvs();
       });
 
@@ -258,13 +260,13 @@ function initMessages98() {
       });
       
       /* Also subscribe to read status updates */
-      const readStatusInterval = setInterval(() => {
+      readStatusInterval = setInterval(() => {
         msgArea.querySelectorAll('[data-msg-id]').forEach(async el => {
           const msgId = el.getAttribute('data-msg-id');
-          if (msgId && msgArea.querySelector(`[data-msg-id="${msgId}"]`)) {
+          if (msgId) {
             const status = await MSG.getReadStatus(me, partner, msgId);
-            const readInd = el.querySelector('span:last-child span:last-child');
-            if (readInd && status.read) {
+            const readInd = el.querySelector('span:last-child');
+            if (readInd && status.read && readInd.textContent === '✓') {
               readInd.textContent = '✓✓';
               readInd.title = 'Read';
             }
