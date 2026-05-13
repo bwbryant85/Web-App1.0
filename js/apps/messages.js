@@ -163,6 +163,7 @@ function initMessages98() {
         chatPanel.style.transform = 'translateX(100%)';
         currentChat = null;
         if (unsubChat) { unsubChat(); unsubChat = null; }
+        clearInterval(readStatusInterval);
         loadConvs();
       });
 
@@ -176,6 +177,7 @@ function initMessages98() {
         const mine = msg.from_user === me;
         const row  = document.createElement('div');
         row.style.cssText = `display:flex;flex-direction:column;align-items:${mine ? 'flex-end' : 'flex-start'};`;
+        row.setAttribute('data-msg-id', msg.id);
         const bub = document.createElement('div');
         bub.style.cssText = `max-width:82%;padding:5px 10px;word-break:break-word;font-family:var(--pixel-font);font-size:.88rem;border:2px solid;
           ${mine
@@ -183,11 +185,29 @@ function initMessages98() {
             : 'background:var(--win-chrome);color:var(--win-text);border-color:var(--win-chrome-light) var(--win-chrome-dark) var(--win-chrome-dark) var(--win-chrome-light);'}`;
         bub.textContent = msg.text;
         const ts = document.createElement('div');
-        ts.style.cssText = 'font-family:var(--pixel-font);font-size:.65rem;color:#808080;margin-top:2px;';
-        ts.textContent = MSG.formatTime(msg.ts);
-        row.appendChild(bub); row.appendChild(ts);
+        ts.style.cssText = 'font-family:var(--pixel-font);font-size:.65rem;color:#808080;margin-top:2px;display:flex;align-items:center;gap:4px;';
+        ts.innerHTML = `<span>${MSG.formatTime(msg.ts)}</span>`;
+        
+        /* Add read receipt for sent messages */
+        if (mine) {
+          const readIndicator = document.createElement('span');
+          readIndicator.style.cssText = 'display:inline-block;width:10px;text-align:center;';
+          readIndicator.textContent = msg.read ? '✓✓' : '✓';
+          readIndicator.title = msg.read ? 'Read' : 'Sent';
+          ts.appendChild(readIndicator);
+        }
+        
+        row.appendChild(bub); 
+        row.appendChild(ts);
         msgArea.appendChild(row);
         msgArea.scrollTop = msgArea.scrollHeight;
+        
+        /* Mark received messages as read after 500ms of appearing */
+        if (!mine && msg.id) {
+          setTimeout(() => {
+            MSG.markAsRead(me, partner, msg.id);
+          }, 500);
+        }
       }
 
       /* Load history (populates shownIds) */
@@ -236,6 +256,21 @@ function initMessages98() {
         if (em && em.textContent.includes('Say hello')) em.remove();
         addBubble(msg);
       });
+      
+      /* Also subscribe to read status updates */
+      const readStatusInterval = setInterval(() => {
+        msgArea.querySelectorAll('[data-msg-id]').forEach(async el => {
+          const msgId = el.getAttribute('data-msg-id');
+          if (msgId && msgArea.querySelector(`[data-msg-id="${msgId}"]`)) {
+            const status = await MSG.getReadStatus(me, partner, msgId);
+            const readInd = el.querySelector('span:last-child span:last-child');
+            if (readInd && status.read) {
+              readInd.textContent = '✓✓';
+              readInd.title = 'Read';
+            }
+          }
+        });
+      }, 2000);
     }
 
     /* New chat from input bar */

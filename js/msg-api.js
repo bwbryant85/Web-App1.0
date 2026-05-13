@@ -16,6 +16,7 @@ window.MSG = (function () {
   let _gun       = null;
   let _callbacks = [];     // onNewMessage subscribers
   let _inboxSeen = new Set(); // dedup inbox events
+  let _readReceipts = {}; // { messageId: { read: true, readAt: timestamp } }
 
   /* ── Gun.js singleton ── */
   function getGun() {
@@ -37,11 +38,27 @@ window.MSG = (function () {
     if (!me || !isReceiving()) return;
     const g = getGun();
     if (!g) return;
-    g.get('ipocket8-inbox-' + me).map().on(msg => {
-      if (!msg || !msg.id || !msg.text || !msg.from_user) return;
-      if (_inboxSeen.has(msg.id)) return;
-      _inboxSeen.add(msg.id);
-      _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
+    
+    /* Listen to inbox changes — poll for new messages */
+    setInterval(() => {
+      g.get('ipocket8-inbox-' + me).map().once(msg => {
+        if (!msg || !msg.id || !msg.text || !msg.from_user) return;
+        if (_inboxSeen.has(msg.id)) return;
+        _inboxSeen.add(msg.id);
+        _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
+      });
+    }, 800);
+    
+    /* Also try continuous listening */
+    g.get('ipocket8-inbox-' + me).on(data => {
+      if (data && typeof data === 'object') {
+        Object.values(data).forEach(msg => {
+          if (!msg || !msg.id || !msg.text || !msg.from_user) return;
+          if (_inboxSeen.has(msg.id)) return;
+          _inboxSeen.add(msg.id);
+          _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
+        });
+      }
     });
   }
   function disconnect() { /* subscriptions are session-scoped */ }
@@ -103,11 +120,33 @@ window.MSG = (function () {
     if (!g) return [];
     return new Promise(resolve => {
       const map = {};
-      // Collect for 1.6 s then resolve
-      const t = setTimeout(() => resolve(Object.values(map).sort((a, b) => a.ts - b.ts)), 1600);
-      g.get(convKey(me, other)).map().once(msg => {
-        if (msg && msg.id && msg.text) map[msg.id] = msg;
-      });
+      let lastCount = 0;
+      let stableCount = 0;
+      
+      /* Collect messages for 1.6 s, stopping early if stable */
+      const t = setTimeout(() => {
+        resolve(Object.values(map).sort((a, b) => a.ts - b.ts));
+      }, 1600);
+      
+      const pollId = setInterval(() => {
+        g.get(convKey(me, other)).map().once(msg => {
+          if (msg && msg.id && msg.text) map[msg.id] = msg;
+        });
+        
+        /* If message count hasn't changed for 2 polls, resolve early */
+        const currentCount = Object.keys(map).length;
+        if (currentCount === lastCount) {
+          stableCount++;
+          if (stableCount >= 2) {
+            clearTimeout(t);
+            clearInterval(pollId);
+            resolve(Object.values(map).sort((a, b) => a.ts - b.ts));
+          }
+        } else {
+          stableCount = 0;
+        }
+        lastCount = currentCount;
+      }, 200);
     });
   }
 
@@ -117,7 +156,7 @@ window.MSG = (function () {
     if (!g) return { ok: false, error: 'Not connected' };
     const ts  = Date.now();
     const id  = ts + '_' + Math.random().toString(36).slice(2, 7);
-    const msg = { id, from_user, to_user, text, ts };
+    const msg = { id, from_user, to_user, text, ts, read: false };
 
     /* Shared conversation history */
     g.get(convKey(from_user, to_user)).get(id).put(msg);
@@ -132,16 +171,73 @@ window.MSG = (function () {
     return { ok: true, message: msg };
   }
 
+  /* ── Mark message as read ── */
+  async function markAsRead(me, partner, messageId) {
+    const g = getGun();
+    if (!g) return;
+    const key = convKey(me, partner);
+    g.get(key).get(messageId).get('read').put(true);
+    g.get(key).get(messageId).get('readAt').put(Date.now());
+    _readReceipts[messageId] = { read: true, readAt: Date.now() };
+  }
+
+  /* ── Get read status for a message ── */
+  async function getReadStatus(me, partner, messageId) {
+    if (_readReceipts[messageId]) return _readReceipts[messageId];
+    const g = getGun();
+    if (!g) return { read: false };
+    return new Promise(resolve => {
+      const t = setTimeout(() => resolve({ read: false }), 800);
+      g.get(convKey(me, partner)).get(messageId).once(msg => {
+        clearTimeout(t);
+        if (msg && msg.read) {
+          resolve({ read: msg.read, readAt: msg.readAt || 0 });
+        } else {
+          resolve({ read: false });
+        }
+      });
+    });
+  }
+
   /* ── Conversation list ── */
   async function getConversations(username) {
     const g = getGun();
     if (!g) return [];
     return new Promise(resolve => {
       const map = {};
-      const t = setTimeout(() => resolve(Object.values(map).sort((a, b) => (b.ts || 0) - (a.ts || 0))), 1600);
-      g.get('ipocket8-convs-' + username).map().once(entry => {
-        if (entry && entry.partner) map[entry.partner] = { partner: entry.partner, text: entry.text || '', ts: entry.ts || 0, unread: 0 };
-      });
+      let lastCount = 0;
+      let stableCount = 0;
+      
+      const t = setTimeout(() => {
+        resolve(Object.values(map).sort((a, b) => (b.ts || 0) - (a.ts || 0)));
+      }, 1600);
+      
+      const pollId = setInterval(() => {
+        g.get('ipocket8-convs-' + username).map().once(entry => {
+          if (entry && entry.partner) {
+            map[entry.partner] = { 
+              partner: entry.partner, 
+              text: entry.text || '', 
+              ts: entry.ts || 0, 
+              unread: 0 
+            };
+          }
+        });
+        
+        /* Early exit if stable */
+        const currentCount = Object.keys(map).length;
+        if (currentCount === lastCount) {
+          stableCount++;
+          if (stableCount >= 2) {
+            clearTimeout(t);
+            clearInterval(pollId);
+            resolve(Object.values(map).sort((a, b) => (b.ts || 0) - (a.ts || 0)));
+          }
+        } else {
+          stableCount = 0;
+        }
+        lastCount = currentCount;
+      }, 200);
     });
   }
 
@@ -152,16 +248,34 @@ window.MSG = (function () {
     const key  = convKey(me, partner);
     const seen = new Set();
     let   ref  = null;
+    let   pollId = null;
+    
     /* Slight delay so getConversation() can pre-populate shownIds first */
     const tid = setTimeout(() => {
+      /* Continuous listening for new messages */
       ref = g.get(key).map().on(msg => {
         if (!msg || !msg.id || !msg.text) return;
         if (seen.has(msg.id)) return;
         seen.add(msg.id);
         onMsg(msg);
       });
+      
+      /* Also poll every 500ms to catch messages that real-time missed */
+      pollId = setInterval(() => {
+        g.get(key).map().once(msg => {
+          if (!msg || !msg.id || !msg.text) return;
+          if (seen.has(msg.id)) return;
+          seen.add(msg.id);
+          onMsg(msg);
+        });
+      }, 500);
     }, 50);
-    return () => { clearTimeout(tid); if (ref && ref.off) ref.off(); };
+    
+    return () => { 
+      clearTimeout(tid); 
+      clearInterval(pollId);
+      if (ref && ref.off) ref.off(); 
+    };
   }
 
   /* ── Contacts ── */
@@ -203,14 +317,21 @@ window.MSG = (function () {
 
   /* Auto-init on page load */
   document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => { getGun(); connect(); }, 1200);
+    setTimeout(() => { getGun(); connect(); }, 500);
   });
+  
+  /* Also try on window load for slower networks */
+  if (document.readyState === 'loading') {
+    window.addEventListener('load', () => {
+      setTimeout(() => { getGun(); connect(); }, 300);
+    });
+  }
 
   return {
     getUsername, setUsername, isReceiving, connect, disconnect,
     onNewMessage, register, checkUser, checkServer, isServerAvailable,
     getConversation, sendMessage, getConversations,
     getContacts, saveContact, deleteContact, formatTime,
-    subscribeToConversation
+    subscribeToConversation, markAsRead, getReadStatus
   };
 })();
