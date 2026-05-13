@@ -270,10 +270,14 @@ function initMessages98() {
           const msgId = el.getAttribute('data-msg-id');
           if (msgId) {
             const status = await MSG.getReadStatus(me, partner, msgId);
-            const readInd = el.querySelector('span:last-child');
-            if (readInd && status.read && readInd.textContent === '✓') {
-              readInd.textContent = '✓✓';
-              readInd.title = 'Read';
+            // Find the read indicator (second span in the timestamp div)
+            const timeDiv = el.querySelector('div:nth-child(2)');
+            if (timeDiv) {
+              const spans = timeDiv.querySelectorAll('span');
+              if (spans.length >= 2 && status.read && spans[1].textContent === '✓') {
+                spans[1].textContent = '✓✓';
+                spans[1].title = 'Read';
+              }
             }
           }
         });
