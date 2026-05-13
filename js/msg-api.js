@@ -19,6 +19,8 @@ window.MSG = (function () {
   let _callbacks = [];     // onNewMessage subscribers
   let _inboxSeen = new Set(); // dedup inbox events
   let _readReceipts = {}; // { messageId: { read: true, readAt: timestamp } }
+  let _inboxSubscription = null; // inbox subscription reference
+  let _isConnected = false; // connection state
 
   /* ── Gun.js singleton ── */
   function getGun() {
@@ -38,29 +40,23 @@ window.MSG = (function () {
   function connect() {
     const me = getUsername();
     if (!me || !isReceiving()) return;
+    if (_isConnected) return; // already connected
+    
     const g = getGun();
     if (!g) return;
     
-    /* Listen to inbox changes — poll for new messages */
-    setInterval(() => {
-      g.get('ipocket8-inbox-' + me).map().once(msg => {
-        if (!msg || !msg.id || !msg.text || !msg.from_user) return;
-        if (_inboxSeen.has(msg.id)) return;
-        _inboxSeen.add(msg.id);
-        _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
-      });
-    }, 300);
+    _isConnected = true;
+    console.log('[MSG] Connected for user:', me);
     
-    /* Also try continuous listening */
-    g.get('ipocket8-inbox-' + me).on(data => {
-      if (data && typeof data === 'object') {
-        Object.values(data).forEach(msg => {
-          if (!msg || !msg.id || !msg.text || !msg.from_user) return;
-          if (_inboxSeen.has(msg.id)) return;
-          _inboxSeen.add(msg.id);
-          _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
-        });
-      }
+    /* Subscribe to inbox using .on() for continuous real-time updates */
+    _inboxSubscription = g.get('ipocket8-inbox-' + me).map().on(function(msg) {
+      if (!msg) return;
+      if (!msg.id || !msg.text || !msg.from_user) return;
+      if (_inboxSeen.has(msg.id)) return;
+      
+      _inboxSeen.add(msg.id);
+      console.log('[MSG] New message received:', msg.id);
+      _callbacks.forEach(cb => { try { cb(msg); } catch(e) { console.error('[MSG] Callback error:', e); } });
     });
   }
   function disconnect() { /* subscriptions are session-scoped */ }
@@ -122,33 +118,22 @@ window.MSG = (function () {
     if (!g) return [];
     return new Promise(resolve => {
       const map = {};
-      let lastCount = 0;
-      let stableCount = 0;
+      const key = convKey(me, other);
+      let timeoutId = null;
       
-      /* Collect messages for 1.6 s, stopping early if stable */
-      const t = setTimeout(() => {
-        resolve(Object.values(map).sort((a, b) => a.ts - b.ts));
-      }, 1600);
-      
-      const pollId = setInterval(() => {
-        g.get(convKey(me, other)).map().once(msg => {
-          if (msg && msg.id && msg.text) map[msg.id] = msg;
-        });
-        
-        /* If message count hasn't changed for 2 polls, resolve early */
-        const currentCount = Object.keys(map).length;
-        if (currentCount === lastCount) {
-          stableCount++;
-          if (stableCount >= 2) {
-            clearTimeout(t);
-            clearInterval(pollId);
-            resolve(Object.values(map).sort((a, b) => a.ts - b.ts));
-          }
-        } else {
-          stableCount = 0;
+      /* Subscribe and collect messages for 2 seconds */
+      const subscription = g.get(key).map().on(msg => {
+        if (msg && msg.id && msg.text) {
+          map[msg.id] = msg;
         }
-        lastCount = currentCount;
-      }, 100);
+      });
+      
+      timeoutId = setTimeout(() => {
+        if (subscription && subscription.off) subscription.off();
+        const result = Object.values(map).sort((a, b) => a.ts - b.ts);
+        console.log('[MSG] Got', result.length, 'messages from', key);
+        resolve(result);
+      }, 2000);
     });
   }
 
@@ -156,25 +141,49 @@ window.MSG = (function () {
   async function sendMessage(from_user, to_user, text) {
     const g = getGun();
     if (!g) return { ok: false, error: 'Not connected' };
+    
     const ts  = Date.now();
     const id  = ts + '_' + Math.random().toString(36).slice(2, 7);
     const msg = { id, from_user, to_user, text, ts, read: false };
 
-    /* Shared conversation history */
-    g.get(convKey(from_user, to_user)).get(id).put(msg);
-    /* Recipient's inbox (for real-time delivery) */
-    g.get('ipocket8-inbox-' + to_user).get(id).put(msg);
-    /* Conversation index for both users */
-    g.get('ipocket8-convs-' + from_user).get(to_user).put({ partner: to_user,   text, ts });
-    g.get('ipocket8-convs-' + to_user  ).get(from_user).put({ partner: from_user, text, ts });
-
-    /* Force sync by putting again after a short delay */
-    setTimeout(() => {
-      g.get(convKey(from_user, to_user)).get(id).put(msg);
-      g.get('ipocket8-inbox-' + to_user).get(id).put(msg);
-      g.get('ipocket8-convs-' + from_user).get(to_user).put({ partner: to_user,   text, ts });
-      g.get('ipocket8-convs-' + to_user  ).get(from_user).put({ partner: from_user, text, ts });
-    }, 100);
+    console.log('[MSG] Sending message from', from_user, 'to', to_user, '- ID:', id);
+    
+    const convkey = convKey(from_user, to_user);
+    
+    try {
+      /* Write to shared conversation history */
+      await new Promise((resolve) => {
+        g.get(convkey).get(id).put(msg, (ack) => {
+          if (ack.ok) console.log('[MSG] Conv history saved');
+          resolve();
+        });
+      });
+      
+      /* Write to recipient's inbox with multiple retries */
+      for (let i = 0; i < 3; i++) {
+        await new Promise((resolve) => {
+          g.get('ipocket8-inbox-' + to_user).get(id).put(msg, (ack) => {
+            if (ack.ok) console.log('[MSG] Inbox write #' + (i+1) + ' succeeded');
+            resolve();
+          });
+        });
+        if (i < 2) await new Promise(r => setTimeout(r, 50));
+      }
+      
+      /* Update conversation index for both users */
+      await new Promise((resolve) => {
+        g.get('ipocket8-convs-' + from_user).get(to_user).put({ partner: to_user, text, ts }, () => resolve());
+      });
+      
+      await new Promise((resolve) => {
+        g.get('ipocket8-convs-' + to_user).get(from_user).put({ partner: from_user, text, ts }, () => resolve());
+      });
+      
+      console.log('[MSG] Message sent successfully:', id);
+    } catch(e) {
+      console.error('[MSG] Send error:', e);
+      return { ok: false, error: 'Failed to send message' };
+    }
 
     /* Notify local listeners immediately (sender sees sent msg at once) */
     _callbacks.forEach(cb => { try { cb(msg); } catch(e) {} });
@@ -215,39 +224,25 @@ window.MSG = (function () {
     if (!g) return [];
     return new Promise(resolve => {
       const map = {};
-      let lastCount = 0;
-      let stableCount = 0;
       
-      const t = setTimeout(() => {
-        resolve(Object.values(map).sort((a, b) => (b.ts || 0) - (a.ts || 0)));
-      }, 1600);
-      
-      const pollId = setInterval(() => {
-        g.get('ipocket8-convs-' + username).map().once(entry => {
-          if (entry && entry.partner) {
-            map[entry.partner] = { 
-              partner: entry.partner, 
-              text: entry.text || '', 
-              ts: entry.ts || 0, 
-              unread: 0 
-            };
-          }
-        });
-        
-        /* Early exit if stable */
-        const currentCount = Object.keys(map).length;
-        if (currentCount === lastCount) {
-          stableCount++;
-          if (stableCount >= 2) {
-            clearTimeout(t);
-            clearInterval(pollId);
-            resolve(Object.values(map).sort((a, b) => (b.ts || 0) - (a.ts || 0)));
-          }
-        } else {
-          stableCount = 0;
+      const subscription = g.get('ipocket8-convs-' + username).map().on(entry => {
+        if (entry && entry.partner) {
+          map[entry.partner] = { 
+            partner: entry.partner, 
+            text: entry.text || '', 
+            ts: entry.ts || 0, 
+            unread: 0 
+          };
         }
-        lastCount = currentCount;
-      }, 100);
+      });
+      
+      /* Collect for 2 seconds then resolve */
+      setTimeout(() => {
+        if (subscription && subscription.off) subscription.off();
+        const result = Object.values(map).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        console.log('[MSG] Got', result.length, 'conversations for', username);
+        resolve(result);
+      }, 2000);
     });
   }
 
@@ -258,33 +253,23 @@ window.MSG = (function () {
     const key  = convKey(me, partner);
     const seen = new Set();
     let   ref  = null;
-    let   pollId = null;
     
-    /* Slight delay so getConversation() can pre-populate shownIds first */
-    const tid = setTimeout(() => {
-      /* Continuous listening for new messages */
-      ref = g.get(key).map().on(msg => {
-        if (!msg || !msg.id || !msg.text) return;
-        if (seen.has(msg.id)) return;
-        seen.add(msg.id);
-        onMsg(msg);
-      });
-      
-      /* Also poll every 200ms to catch messages that real-time missed */
-      pollId = setInterval(() => {
-        g.get(key).map().once(msg => {
-          if (!msg || !msg.id || !msg.text) return;
-          if (seen.has(msg.id)) return;
-          seen.add(msg.id);
-          onMsg(msg);
-        });
-      }, 200);
-    }, 50);
+    console.log('[MSG] Subscribing to conversation:', key);
+    
+    /* Continuous listening for new messages */
+    ref = g.get(key).map().on(function(msg) {
+      if (!msg || !msg.id || !msg.text) return;
+      if (seen.has(msg.id)) return;
+      seen.add(msg.id);
+      console.log('[MSG] Conversation message received:', msg.id);
+      onMsg(msg);
+    });
     
     return () => { 
-      clearTimeout(tid); 
-      clearInterval(pollId);
-      if (ref && ref.off) ref.off(); 
+      if (ref && ref.off) {
+        ref.off();
+        console.log('[MSG] Unsubscribed from conversation:', key);
+      }
     };
   }
 
@@ -327,15 +312,12 @@ window.MSG = (function () {
 
   /* Auto-init on page load */
   document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => { getGun(); connect(); }, 500);
+    setTimeout(() => { 
+      console.log('[MSG] Initializing Gun.js...');
+      getGun();
+      connect();
+    }, 200);
   });
-  
-  /* Also try on window load for slower networks */
-  if (document.readyState === 'loading') {
-    window.addEventListener('load', () => {
-      setTimeout(() => { getGun(); connect(); }, 300);
-    });
-  }
 
   return {
     getUsername, setUsername, isReceiving, connect, disconnect,

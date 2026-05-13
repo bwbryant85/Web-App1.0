@@ -234,6 +234,7 @@ function initMessages98() {
         if (!text) return;
         chatInp.value = '';
         sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending…';
         try {
           const res = await MSG.sendMessage(me, partner, text);
           if (res.ok) {
@@ -244,8 +245,12 @@ function initMessages98() {
           } else {
             showToast98('❌ Error', res.error || 'Failed to send');
           }
-        } catch(e) { showToast98('❌ Error', 'Network error'); }
+        } catch(e) { 
+          console.error('Send error:', e);
+          showToast98('❌ Error', 'Network error'); 
+        }
         sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
         chatInp.focus();
       }
       sendBtn.addEventListener('click', doSend);
